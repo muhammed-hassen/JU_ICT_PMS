@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -19,3 +20,4 @@ Route::middleware(['auth', 'can:view users'])->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/create', [UserController::class, 'create'])->middleware('can:create users');
 });
+Route::resource('users', UserController::class);
