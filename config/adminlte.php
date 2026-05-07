@@ -307,6 +307,25 @@ return [
     */
 
     'menu' => [
+        [
+            'text' => 'Settings',
+            'icon' => 'fas fa-fw fa-cog',
+            'can' => 'access-admin',
+            'submenu' => [
+                [
+                    'text' => 'Roles',
+                    'url' => 'admin/roles',
+                    'icon' => 'fas fa-fw fa-user-shield',
+                    'can' => 'assign-role',
+                ],
+                [
+                    'text' => 'Permissions',
+                    'url' => 'admin/permissions',
+                    'icon' => 'fas fa-fw fa-key',
+                    'can' => 'configure-system',
+                ],
+            ],
+        ],
 
         [
             'text' => 'pages',
