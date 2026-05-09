@@ -1,23 +1,35 @@
 <?php
 
-use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\UserController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
 
+// Public route
+Route::get('/', function () {
+    return redirect('/users');
+});
+// Auth routes (ONLY ONCE)
 Auth::routes();
 
+// Home route
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
+// Example admin page
 Route::get('admin/posts', function () {
     return view('posts');
 });
 
-Route::middleware(['auth', 'can:view users'])->group(function () {
-    Route::get('/users', [UserController::class, 'index']);
-    Route::get('/users/create', [UserController::class, 'create'])->middleware('can:create users');
+// Protected routes (auth + permissions)
+Route::middleware(['auth'])->group(function () {
+
+    // Users CRUD with permission control
+    Route::resource('users', UserController::class);
+
 });
-Route::resource('users', UserController::class);

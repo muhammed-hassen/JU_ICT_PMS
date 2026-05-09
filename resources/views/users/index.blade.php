@@ -1,96 +1,150 @@
-@extends('layouts.app')
-@section('title', 'Users List')
+@extends('adminlte::page')
+
+@section('title', 'Users')
+
+@section('content_header')
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Users</h1>
+    </div>
+@stop
 
 @section('content')
-<div class="bg-white rounded-xl shadow-sm border p-6">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Users</h1>
-            <p class="text-sm text-gray-500 mt-1">Manage users and their roles</p>
-        </div>
-        <a href="{{ route('users.create') }}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow transition">
-            <i class="fas fa-plus"></i> Create User
+
+<div class="card">
+
+    {{-- HEADER --}}
+    <div class="card-header d-flex justify-content-between align-items-center">
+
+        <h3 class="card-title">Manage Users</h3>
+
+        <a href="{{ route('users.create') }}" class="btn btn-success btn-sm">
+            <i class="fas fa-plus"></i> Add User
         </a>
+
     </div>
 
-    {{-- Search --}}
-    <form action="{{ route('users.index') }}" method="GET" class="mb-6 flex gap-2">
-        <div class="relative flex-1">
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="Search by name or email"
-                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-        </div>
-        <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg transition">
-            Search
-        </button>
-    </form>
+    <div class="card-body">
+      {{-- ALERTS --}}
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">
+        {{ session('success') }}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>
+@endif
 
-    {{-- Table --}}
-    <div class="overflow-x-auto rounded-lg border">
-        <table class="w-full text-left">
-            <thead class="bg-gray-50 text-gray-600 text-sm uppercase">
-                <tr>
-                    <th class="px-4 py-3">Name</th>
-                    <th class="px-4 py-3">Email</th>
-                    <th class="px-4 py-3">Role</th>
-                    <th class="px-4 py-3 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                @forelse($users as $user)
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-800">{{ $user->name }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ $user->email }}</td>
-                    <td class="px-4 py-3">
-                        <span class="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-1 rounded">
-                            {{ $user->role->name ?? 'No Role' }}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <a href="{{ route('users.edit', $user->id) }}"
-                           class="inline-flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm px-3 py-1.5 rounded-md transition">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="inline delete-form">
-                            @csrf
-                            @method('DELETE')
-                            <button type="button" onclick="confirmDelete(this)"
-                                    class="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-md transition">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-400">
-                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                        No users found
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show">
+        {{ session('error') }}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>
+@endif
+        {{-- SEARCH --}}
+        <form method="GET" action="{{ route('users.index') }}" class="mb-3">
+            <div class="input-group">
+                <input type="text"
+                       name="search"
+                       value="{{ $search ?? '' }}"
+                       class="form-control"
+                       placeholder="Search by name or email...">
+
+                <div class="input-group-append">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {{-- TABLE --}}
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover">
+
+                <thead class="bg-primary text-white">
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th width="150">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @forelse($users as $user)
+                        <tr>
+                            <td>{{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}</td>
+                            <td>{{ $user->name }}</td>
+                            <td>{{ $user->email }}</td>
+
+                            {{-- ROLE --}}
+                            <td>
+                          @php $role = $user->role->name ?? 'Member'; @endphp
+
+<span class="badge
+    @if($role == 'Admin') badge-danger
+    @elseif($role == 'Director') badge-warning
+    @elseif($role == 'Team Leader') badge-info
+    @else badge-success
+    @endif">
+    {{ $role }}
+</span>
+
+
+                            </td>
+
+                            {{-- ACTIONS --}}
+                            <td class="text-nowrap">
+                            <div class="btn-group">
+
+                                {{-- EDIT --}}
+                                <a href="{{ route('users.edit', $user->id) }}"
+                                   class="btn btn-sm btn-primary mr-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+
+                                {{-- DELETE --}}
+                                <form action="{{ route('users.destroy', $user->id) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('Are you sure you want to delete this user?')">
+
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+
+                                </form>
+                            </div>
+                            </td>
+
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                No users found
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+
+            </table>
+            <div class="d-flex justify-content-center mt-3">
+    <div class="d-flex justify-content-center mt-3">
+    {{ $users->links('pagination::simple-bootstrap-4') }}
+</div>
+</div>
+           
+        </div>
+
     </div>
 </div>
 
+@stop
+@push('js')
 <script>
-    function confirmDelete(btn) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "This user will be permanently deleted!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                btn.closest('form').submit();
-            }
-        });
-    }
+    setTimeout(function () {
+        $(".alert").fadeOut("slow");
+    }, 2000); // 2 seconds
 </script>
-@endsection
+@endpush
