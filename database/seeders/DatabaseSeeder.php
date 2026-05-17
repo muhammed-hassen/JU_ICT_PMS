@@ -15,9 +15,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            ProjectTemplateReferenceSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
             RbacUserSeeder::class,
+            ProjectTemplateExampleSeeder::class,
         ]);
     }
 }

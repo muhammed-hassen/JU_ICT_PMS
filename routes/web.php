@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ProjectTemplateController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
@@ -27,4 +28,28 @@ Route::middleware(['auth', 'permission:access-admin'])->prefix('admin')->name('a
     Route::resource('permissions', PermissionController::class)
         ->except('show')
         ->middleware('permission:configure-system');
+
+    Route::get('templates', [ProjectTemplateController::class, 'index'])
+        ->name('templates.index')
+        ->middleware('permission:view-templates');
+
+    Route::get('templates/create', [ProjectTemplateController::class, 'create'])
+        ->name('templates.create')
+        ->middleware('permission:create-template');
+
+    Route::post('templates', [ProjectTemplateController::class, 'store'])
+        ->name('templates.store')
+        ->middleware('permission:create-template');
+
+    Route::get('templates/{template}/edit', [ProjectTemplateController::class, 'edit'])
+        ->name('templates.edit')
+        ->middleware('permission:edit-template');
+
+    Route::put('templates/{template}', [ProjectTemplateController::class, 'update'])
+        ->name('templates.update')
+        ->middleware('permission:edit-template');
+
+    Route::delete('templates/{template}', [ProjectTemplateController::class, 'destroy'])
+        ->name('templates.destroy')
+        ->middleware('permission:delete-template');
 });

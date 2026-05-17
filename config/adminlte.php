@@ -332,6 +332,12 @@ return [
                     'icon' => 'fas fa-fw fa-key',
                     'can' => 'configure-system',
                 ],
+                [
+                    'text' => 'Project Templates',
+                    'url' => 'admin/templates',
+                    'icon' => 'fas fa-fw fa-project-diagram',
+                    'can' => 'view-templates',
+                ],
             ],
         ],
 
