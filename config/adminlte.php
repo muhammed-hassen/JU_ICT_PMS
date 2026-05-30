@@ -306,7 +306,6 @@ return [
     |
     */
 
-<<<<<<< HEAD
     'menu' => [
 
         [
@@ -314,16 +313,6 @@ return [
             'url' => 'home',
             'icon' => 'fas fa-home',
         ],
-=======
-    'menu' =>  [
-
-    [
-        'text' => 'Dashboard',
-        'url'  => 'home',
-        'icon' => 'fas fa-home',
-    ],
-
->>>>>>> 3549e1438c9e96b64732315126aea95c51142e5e
 
         [
             'text' => 'Settings',
