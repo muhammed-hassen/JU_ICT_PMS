@@ -179,12 +179,14 @@ return [
     |
     */
 
-    'classes_auth_card' => 'card-outline card-primary',
+    // 'classes_auth_card' => 'card-outline card-primary',
     'classes_auth_header' => '',
     'classes_auth_body' => '',
     'classes_auth_footer' => '',
     'classes_auth_icon' => '',
-    'classes_auth_btn' => 'btn-flat btn-primary',
+    // 'classes_auth_btn' => 'btn-flat btn-primary',
+    'classes_auth_card' => 'card-outline card-success',
+    'classes_auth_btn' => 'btn-flat btn-success',
 
     /*
     |--------------------------------------------------------------------------
@@ -209,6 +211,11 @@ return [
     'classes_topnav' => 'navbar-white navbar-light',
     'classes_topnav_nav' => 'navbar-expand',
     'classes_topnav_container' => 'container',
+
+    // 'classes_brand' => 'bg-success',
+    // 'classes_brand_text' => 'text-white',
+    // 'classes_sidebar' => 'sidebar-dark-success elevation-4',
+    // 'classes_topnav' => 'navbar-success navbar-dark',
 
     /*
     |--------------------------------------------------------------------------
@@ -311,34 +318,98 @@ return [
         [
             'text' => 'Dashboard',
             'url' => 'home',
-            'icon' => 'fas fa-home',
+            'icon' => 'fas fa-tachometer-alt',
         ],
-
         [
-            'text' => 'Settings',
-            'icon' => 'fas fa-fw fa-cog',
+            'header' => 'PROJECT MANAGEMENT',
+        ],
+        [
+            'text' => 'Projects',
+            'icon' => 'fas fa-project-diagram',
+            'submenu' => [
+                [
+                    'text' => 'All Projects',
+                    'url' => 'admin/projects',
+                    'icon' => 'fas fa-list',
+                ],
+                [
+                    'text' => 'Create Project',
+                    'url' => 'admin/projects/create',
+                    'icon' => 'fas fa-plus-circle',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Project Templates',
+            'url' => 'admin/templates',
+            'icon' => 'fas fa-copy',
+        ],
+        [
+            'header' => 'ADMINISTRATION',
+            'can' => 'access-admin',
+        ],
+        [
+            'text' => 'Roles & Permissions',
+            'icon' => 'fas fa-shield-alt',
             'can' => 'access-admin',
             'submenu' => [
                 [
                     'text' => 'Roles',
                     'url' => 'admin/roles',
-                    'icon' => 'fas fa-fw fa-user-shield',
-                    'can' => 'assign-role',
+                    'icon' => 'fas fa-users-cog',
                 ],
                 [
                     'text' => 'Permissions',
                     'url' => 'admin/permissions',
-                    'icon' => 'fas fa-fw fa-key',
-                    'can' => 'configure-system',
-                ],
-                [
-                    'text' => 'Project Templates',
-                    'url' => 'admin/templates',
-                    'icon' => 'fas fa-fw fa-project-diagram',
-                    'can' => 'view-templates',
+                    'icon' => 'fas fa-key',
                 ],
             ],
         ],
+        [
+            'type' => 'navbar-search',
+            'text' => 'Search',
+            'topnav_right' => true,
+        ],
+        [
+            'type' => 'fullscreen-widget',
+            'topnav_right' => true,
+        ],
+
+        // comented out for now, will add later when needed
+
+        // [
+        //     'text' => 'Dashboard',
+        //     'url' => 'home',
+        //     'icon' => 'fas fa-home',
+        // ],
+
+        // [
+        //     'text' => 'Settings',
+        //     'icon' => 'fas fa-fw fa-cog',
+        //     'can' => 'access-admin',
+        //     'submenu' => [
+        //         [
+        //             'text' => 'Roles',
+        //             'url' => 'admin/roles',
+        //             'icon' => 'fas fa-fw fa-user-shield',
+        //             'can' => 'assign-role',
+        //         ],
+        //         [
+        //             'text' => 'Permissions',
+        //             'url' => 'admin/permissions',
+        //             'icon' => 'fas fa-fw fa-key',
+        //             'can' => 'configure-system',
+        //         ],
+        //         [
+        //             'text' => 'Project Templates',
+        //             'url' => 'admin/templates',
+        //             'icon' => 'fas fa-fw fa-project-diagram',
+        //             'can' => 'view-templates',
+        //         ],
+        //     ],
+        // ],
+
+        // comented out for now, will add later when needed
 
         // [
         //     'text' => 'pages',
@@ -355,42 +426,46 @@ return [
         //     'label_color' => 'success',
         // ],
 
-        // Navbar items:
-        [
-            'type' => 'navbar-search',
-            'text' => 'search',
-            'topnav_right' => true,
-        ],
-        [
-            'type' => 'fullscreen-widget',
-            'topnav_right' => true,
-        ],
+        // comented out for now, will add later when needed
 
-        // Or with submenu:
-        [
-            'text' => 'Project Management',
-            'icon' => 'fas fa-tasks',
-            'submenu' => [
-                [
-                    'text' => 'All Projects',
-                    'url' => 'admin/projects',
-                    'icon' => 'fas fa-list',
-                    'active' => ['admin/projects*'],
-                ],
-                [
-                    'text' => 'Create Project',
-                    'url' => 'admin/projects/create',
-                    'icon' => 'fas fa-plus-circle',
-                    'active' => ['admin/projects/create*'],
-                ],
-                [
-                    'text' => 'Templates',
-                    'url' => 'admin/templates',
-                    'icon' => 'fas fa-copy',
-                    'active' => ['admin/templates*'],
-                ],
-            ],
-        ],
+        // Navbar items:
+        // [
+        //     'type' => 'navbar-search',
+        //     'text' => 'search',
+        //     'topnav_right' => true,
+        // ],
+        // [
+        //     'type' => 'fullscreen-widget',
+        //     'topnav_right' => true,
+        // ],
+
+        // // Or with submenu:
+        // [
+        //     'text' => 'Project Management',
+        //     'icon' => 'fas fa-tasks',
+        //     'submenu' => [
+        //         [
+        //             'text' => 'All Projects',
+        //             'url' => 'admin/projects',
+        //             'icon' => 'fas fa-list',
+        //             'active' => ['admin/projects*'],
+        //         ],
+        //         [
+        //             'text' => 'Create Project',
+        //             'url' => 'admin/projects/create',
+        //             'icon' => 'fas fa-plus-circle',
+        //             'active' => ['admin/projects/create*'],
+        //         ],
+        //         [
+        //             'text' => 'Templates',
+        //             'url' => 'admin/templates',
+        //             'icon' => 'fas fa-copy',
+        //             'active' => ['admin/templates*'],
+        //         ],
+        //     ],
+        // ],
+
+        // comented out for now, will add later when needed
 
         // Separator (optional)
         ['header' => 'Administration'],
