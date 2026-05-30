@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\PermissionController;
+<<<<<<< HEAD
 use App\Http\Controllers\Admin\ProjectController;
+=======
+>>>>>>> 3549e1438c9e96b64732315126aea95c51142e5e
 use App\Http\Controllers\Admin\ProjectTemplateController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\HomeController;
@@ -53,6 +56,7 @@ Route::middleware(['auth', 'permission:access-admin'])->prefix('admin')->name('a
     Route::delete('templates/{template}', [ProjectTemplateController::class, 'destroy'])
         ->name('templates.destroy')
         ->middleware('permission:delete-template');
+<<<<<<< HEAD
 
     // ========== PROJECT MANAGEMENT ROUTES (Add these) ==========
     Route::resource('projects', ProjectController::class)
@@ -62,4 +66,6 @@ Route::middleware(['auth', 'permission:access-admin'])->prefix('admin')->name('a
     Route::get('projects/{project}', [ProjectController::class, 'show'])
         ->name('projects.show')
         ->middleware('permission:view-projects');
+=======
+>>>>>>> 3549e1438c9e96b64732315126aea95c51142e5e
 });
