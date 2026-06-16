@@ -6,10 +6,13 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-//use App\Http\Controllers\UserController;
+use Spatie\Permission\Traits\HasRoles;
+
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, HasRoles, Notifiable;
+
+    protected string $guard_name = 'web';
 
     /**
      * The attributes that are mass assignable.
@@ -18,7 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role_id', // ✅ IMPORTANT ADD THIS
+        'role_id',
     ];
 
     /**
@@ -30,7 +33,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      */
     protected function casts(): array
     {
@@ -40,7 +43,9 @@ class User extends Authenticatable
         ];
     }
 
-    // ✅ ADD THIS RELATIONSHIP FUNCTION
+    /**
+     * Role relationship (for legacy + compatibility)
+     */
     public function role()
     {
         return $this->belongsTo(\App\Models\Role::class);

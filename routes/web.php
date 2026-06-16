@@ -1,9 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ProjectController;
+use App\Http\Controllers\Admin\ProjectTemplateController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,23 +17,42 @@ use App\Http\Controllers\UserController;
 
 // Public route
 Route::get('/', function () {
-    return redirect('/users');
+    return auth()->check()
+        ? redirect()->route('home')
+        : redirect()->route('login');
 });
-// Auth routes (ONLY ONCE)
-Auth::routes();
 
-// Home route
+// Authentication
+Auth::routes(['register' => false]);
+
+// Home
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-// Example admin page
-Route::get('admin/posts', function () {
-    return view('posts');
-});
-
-// Protected routes (auth + permissions)
+// ================= USER CRUD =================
 Route::middleware(['auth'])->group(function () {
 
-    // Users CRUD with permission control
     Route::resource('users', UserController::class);
+
+});
+
+// ================= ADMIN MODULES =================
+Route::middleware(['auth', 'permission:access-admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        Route::get('posts', function () {
+            return view('posts');
+        })->name('posts.index');
+
+        Route::resource('roles', RoleController::class)
+            ->except('show');
+
+        Route::resource('permissions', PermissionController::class)
+            ->except('show');
+
+        Route::resource('templates', ProjectTemplateController::class);
+
+        Route::resource('projects', ProjectController::class);
 
 });

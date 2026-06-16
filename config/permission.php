@@ -1,8 +1,5 @@
 <?php
 
-use Spatie\Permission\DefaultTeamResolver;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 return [
 
@@ -17,7 +14,7 @@ return [
          * `Spatie\Permission\Contracts\Permission` contract.
          */
 
-        'permission' => Permission::class,
+'permission' => App\Models\Permission::class,
 
         /*
          * When using the "HasRoles" trait from this package, we need to know which
@@ -28,8 +25,7 @@ return [
          * `Spatie\Permission\Contracts\Role` contract.
          */
 
-        'role' => Role::class,
-
+'role' => App\Models\Role::class,
     ],
 
     'table_names' => [
@@ -116,10 +112,10 @@ return [
 
     /*
      * Events will fire when a role or permission is assigned/unassigned:
-     * \Spatie\Permission\Events\RoleAttached
-     * \Spatie\Permission\Events\RoleDetached
-     * \Spatie\Permission\Events\PermissionAttached
-     * \Spatie\Permission\Events\PermissionDetached
+* \Spatie\Permission\Events\RoleAttachedEvent
+* \Spatie\Permission\Events\RoleDetachedEvent
+* \Spatie\Permission\Events\PermissionAttachedEvent
+* \Spatie\Permission\Events\PermissionDetachedEvent
      *
      * To enable, set to true, and then create listeners to watch these events.
      */
@@ -140,7 +136,7 @@ return [
     /*
      * The class to use to resolve the permissions team id
      */
-    'team_resolver' => DefaultTeamResolver::class,
+'team_resolver' => \Spatie\Permission\DefaultTeamResolver::class,
 
     /*
      * Passport Client Credentials Grant
@@ -187,8 +183,7 @@ return [
          * When permissions or roles are updated the cache is flushed automatically.
          */
 
-        'expiration_time' => DateInterval::createFromDateString('24 hours'),
-
+'expiration_time' => \DateInterval::createFromDateString('24 hours'),
         /*
          * The cache key used to store all permissions.
          */
