@@ -171,6 +171,7 @@ return [
 'classes_auth_footer' => '',
 'classes_auth_icon' => '',
 'classes_auth_btn' => 'btn-flat btn-primary',
+/*
     |--------------------------------------------------------------------------
     | Admin Panel Classes
     |--------------------------------------------------------------------------
@@ -189,6 +190,7 @@ return [
 'classes_content_header' => '',
 'classes_content' => '',
 'classes_sidebar' => 'sidebar-dark-primary elevation-4',
+/*
     |--------------------------------------------------------------------------
     | Sidebar
     |--------------------------------------------------------------------------
@@ -206,6 +208,7 @@ return [
     'sidebar_collapse_remember' => false,
     'sidebar_collapse_remember_no_transition' => true,
 'right_sidebar_theme' => 'dark',
+/*
     |--------------------------------------------------------------------------
     | Control Sidebar (Right Sidebar)
     |--------------------------------------------------------------------------
@@ -219,16 +222,12 @@ return [
 
     'right_sidebar' => false,
     'right_sidebar_icon' => 'fas fa-cogs',
-<<<<<<< HEAD
-    'right_sidebar_theme' => 'dark',
-=======
-    'right_sidebar_theme' => 'light',
->>>>>>> 85513604055f8dcb2b43cf3b9ee66a9ac0831c70
-    'right_sidebar_slide' => true,
-    'right_sidebar_push' => true,
-    'right_sidebar_scrollbar_theme' => 'os-theme-light',
-    'right_sidebar_scrollbar_auto_hide' => 'l',
 
+'right_sidebar_theme' => 'dark',
+'right_sidebar_slide' => true,
+'right_sidebar_push' => true,
+'right_sidebar_scrollbar_theme' => 'os-theme-light',
+'right_sidebar_scrollbar_auto_hide' => 'l',
     /*
     |--------------------------------------------------------------------------
     | URLs
@@ -247,6 +246,7 @@ return [
     'login_url' => 'login',
 
     'register_url' => 'register',
+    /*
     |--------------------------------------------------------------------------
     | Laravel Asset Bundling
     |--------------------------------------------------------------------------
@@ -460,4 +460,5 @@ return [
     */
 
 'livewire' => false,
+],
 ];

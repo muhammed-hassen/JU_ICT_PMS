@@ -50,4 +50,11 @@ class User extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Role::class);
     }
+   public function teams()
+{
+    return $this->belongsToMany(
+        \App\Models\Team::class,
+        'team_members'
+    );
+}
 }
