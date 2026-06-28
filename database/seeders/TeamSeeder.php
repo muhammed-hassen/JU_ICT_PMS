@@ -15,6 +15,7 @@ class TeamSeeder extends Seeder
             ['email' => 'director@ict.ju.edu.et'],
             ['name' => 'ICT Director', 'password' => bcrypt('password')]
         );
+        $director->syncRoles(['ICT Director']);
 
         $teamLeaders = [
             ['name' => 'Development Team Leader', 'email' => 'dev.lead@ict.ju.edu.et'],
@@ -28,6 +29,8 @@ class TeamSeeder extends Seeder
                 ['email' => $leader['email']],
                 ['name' => $leader['name'], 'password' => bcrypt('password')]
             );
+
+            $createdLeaders[array_key_last($createdLeaders)]->syncRoles(['Team Leader']);
         }
 
         // Create the ICT Directorate (top level)

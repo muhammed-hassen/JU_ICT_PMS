@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Phase;
 use App\Models\PhaseStatus;
 use App\Models\Project;
 use App\Models\ProjectTemplate;
-use App\Models\Task;
 use App\Models\TaskPriority;
 use App\Models\TaskStatus;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\ProjectTemplateApplier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,7 +82,7 @@ class ProjectController extends Controller
             }
 
             if ($validated['template_id'] ?? false) {
-                $this->generateFromTemplate($project, $validated['template_id'], $request->user()->id);
+                app(ProjectTemplateApplier::class)->apply($project->id, (int) $validated['template_id'], $request->user()->id);
             }
         });
 
@@ -168,39 +167,4 @@ class ProjectController extends Controller
             ->with('status', 'Project deleted successfully.');
     }
 
-    protected function generateFromTemplate(Project $project, int $templateId, int $userId): void
-    {
-        $template = ProjectTemplate::with('phases.tasks')->findOrFail($templateId);
-
-        $notStartedStatus = PhaseStatus::where('name', 'Not Started')->first();
-        $taskNotStarted = TaskStatus::where('name', 'Not Started')->first();
-
-        foreach ($template->phases as $phaseTemplate) {
-            $phase = Phase::create([
-                'project_id' => $project->id,
-                'phase_status_id' => $notStartedStatus?->id,
-                'name' => $phaseTemplate->name,
-                'description' => $phaseTemplate->description,
-                'sort_order' => $phaseTemplate->sort_order,
-                'progress_percentage' => 0,
-                'created_by' => $userId,
-                'updated_by' => null,
-            ]);
-
-            foreach ($phaseTemplate->tasks as $taskTemplate) {
-                Task::create([
-                    'phase_id' => $phase->id,
-                    'task_status_id' => $taskNotStarted?->id,
-                    'task_priority_id' => $taskTemplate->task_priority_id,
-                    'assigned_to' => null,
-                    'title' => $taskTemplate->title,
-                    'description' => $taskTemplate->description,
-                    'estimated_hours' => $taskTemplate->estimated_hours,
-                    'progress_percentage' => 0,
-                    'created_by' => $userId,
-                    'updated_by' => null,
-                ]);
-            }
-        }
-    }
 }

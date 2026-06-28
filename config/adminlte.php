@@ -345,6 +345,33 @@ return [
             'icon' => 'fas fa-copy',
         ],
         [
+            'text' => 'Organization',
+            'icon' => 'fas fa-sitemap',
+            'can' => 'view-organization-structure',
+            'submenu' => [
+                [
+                    'text' => 'Teams',
+                    'url' => 'admin/organization/teams',
+                    'icon' => 'fas fa-users',
+                ],
+                [
+                    'text' => 'Members',
+                    'url' => 'admin/organization/members',
+                    'icon' => 'fas fa-user-friends',
+                ],
+                [
+                    'text' => 'Directors',
+                    'url' => 'admin/organization/directors',
+                    'icon' => 'fas fa-user-tie',
+                ],
+                [
+                    'text' => 'Team Leaders',
+                    'url' => 'admin/organization/team-leaders',
+                    'icon' => 'fas fa-user-shield',
+                ],
+            ],
+        ],
+        [
             'header' => 'ADMINISTRATION',
             'can' => 'access-admin',
         ],

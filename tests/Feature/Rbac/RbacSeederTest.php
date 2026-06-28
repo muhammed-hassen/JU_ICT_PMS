@@ -21,9 +21,13 @@ class RbacSeederTest extends TestCase
         $this->assertDatabaseHas('permissions', ['name' => 'configure-system', 'module' => 'system']);
 
         $adminRole = Role::findByName('System Administrator');
+        $directorRole = Role::findByName('ICT Director');
         $teamMemberRole = Role::findByName('Team Member');
 
         $this->assertSame(Permission::count(), $adminRole->permissions()->count());
+        $this->assertSame(Permission::count(), $directorRole->permissions()->count());
+        $this->assertTrue($directorRole->hasPermissionTo('configure-system'));
+        $this->assertTrue($directorRole->hasPermissionTo('assign-role'));
         $this->assertTrue($teamMemberRole->hasPermissionTo('view-own-tasks'));
         $this->assertFalse($teamMemberRole->hasPermissionTo('view-all-tasks'));
     }
