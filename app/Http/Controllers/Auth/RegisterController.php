@@ -60,6 +60,22 @@ class RegisterController extends Controller
      * @return User
      */
     protected function create(array $data)
+{
+    $memberRole = \App\Models\Role::where('name', 'Member')->first();
+
+    if (!$memberRole) {
+        throw new \Exception("Member role not found in roles table");
+    }
+
+    return \App\Models\User::create([
+        'name' => $data['name'],
+        'email' => $data['email'],
+        'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
+        'role_id' => $memberRole->id,
+    ]);
+}
+}
+=======
     {
         return User::create([
             'name' => $data['name'],
@@ -67,4 +83,5 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
         ]);
     }
-}
+>>>>>>> 85513604055f8dcb2b43cf3b9ee66a9ac0831c70
+

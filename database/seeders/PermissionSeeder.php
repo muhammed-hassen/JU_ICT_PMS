@@ -14,6 +14,7 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $guardName = config('rbac.guard_name', 'web');
+
         $permissions = collect(config('rbac.permissions', []))
             ->flatMap(fn (array $items, string $module) => collect($items)->map(
                 fn (array $permission) => [

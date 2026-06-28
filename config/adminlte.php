@@ -22,9 +22,9 @@ return [
     |
     */
 
-    'title' => 'JU ICT PMS',
-    'title_prefix' => '',
-    'title_postfix' => '',
+'title' => 'JU ICT PMS',
+'title_prefix' => '',
+'title_postfix' => '',
 
     /*
     |--------------------------------------------------------------------------
@@ -71,12 +71,7 @@ return [
     |
     */
 
-    'logo' => '<b>JU-</b><b>ICT</b>-PMS',
-    'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-    'logo_img_class' => 'brand-image img-circle elevation-3',
-    'logo_img_xl' => null,
-    'logo_img_xl_class' => 'brand-image-xs',
-    'logo_img_alt' => 'Admin Logo',
+'logo' => '<b>JU-</b><b>ICT</b>-PMS',
 
     /*
     |--------------------------------------------------------------------------
@@ -118,17 +113,8 @@ return [
     */
 
     'preloader' => [
-        'enabled' => false,
-        'mode' => 'fullscreen',
-        'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-            'alt' => 'AdminLTE Preloader Image',
-            'effect' => 'animation__shake',
-            'width' => 60,
-            'height' => 60,
-        ],
-    ],
 
+'enabled' => true,
     /*
     |--------------------------------------------------------------------------
     | User Menu
@@ -179,16 +165,13 @@ return [
     |
     */
 
-    // 'classes_auth_card' => 'card-outline card-primary',
-    'classes_auth_header' => '',
-    'classes_auth_body' => '',
-    'classes_auth_footer' => '',
-    'classes_auth_icon' => '',
-    // 'classes_auth_btn' => 'btn-flat btn-primary',
-    'classes_auth_card' => 'card-outline card-success',
-    'classes_auth_btn' => 'btn-flat btn-success',
-
-    /*
+'classes_auth_card' => 'card-outline card-primary',
+'classes_auth_header' => '',
+'classes_auth_body' => '',
+'classes_auth_footer' => '',
+'classes_auth_icon' => '',
+'classes_auth_btn' => 'btn-flat btn-primary',
+/*
     |--------------------------------------------------------------------------
     | Admin Panel Classes
     |--------------------------------------------------------------------------
@@ -201,23 +184,13 @@ return [
     */
 
     'classes_body' => '',
-    'classes_brand' => 'bg-primary',
-    'classes_brand_text' => 'text-white',
-    'classes_content_wrapper' => '',
-    'classes_content_header' => '',
-    'classes_content' => '',
-    'classes_sidebar' => 'sidebar-light-primary elevation-4',
-    'classes_sidebar_nav' => '',
-    'classes_topnav' => 'navbar-white navbar-light',
-    'classes_topnav_nav' => 'navbar-expand',
-    'classes_topnav_container' => 'container',
-
-    // 'classes_brand' => 'bg-success',
-    // 'classes_brand_text' => 'text-white',
-    // 'classes_sidebar' => 'sidebar-dark-success elevation-4',
-    // 'classes_topnav' => 'navbar-success navbar-dark',
-
-    /*
+'classes_brand' => '',
+'classes_brand_text' => '',
+'classes_content_wrapper' => '',
+'classes_content_header' => '',
+'classes_content' => '',
+'classes_sidebar' => 'sidebar-dark-primary elevation-4',
+/*
     |--------------------------------------------------------------------------
     | Sidebar
     |--------------------------------------------------------------------------
@@ -234,12 +207,8 @@ return [
     'sidebar_collapse_auto_size' => false,
     'sidebar_collapse_remember' => false,
     'sidebar_collapse_remember_no_transition' => true,
-    'sidebar_scrollbar_theme' => 'os-theme-dark',
-    'sidebar_scrollbar_auto_hide' => 'l',
-    'sidebar_nav_accordion' => true,
-    'sidebar_nav_animation_speed' => 300,
-
-    /*
+'right_sidebar_theme' => 'dark',
+/*
     |--------------------------------------------------------------------------
     | Control Sidebar (Right Sidebar)
     |--------------------------------------------------------------------------
@@ -253,12 +222,12 @@ return [
 
     'right_sidebar' => false,
     'right_sidebar_icon' => 'fas fa-cogs',
-    'right_sidebar_theme' => 'light',
-    'right_sidebar_slide' => true,
-    'right_sidebar_push' => true,
-    'right_sidebar_scrollbar_theme' => 'os-theme-light',
-    'right_sidebar_scrollbar_auto_hide' => 'l',
 
+'right_sidebar_theme' => 'dark',
+'right_sidebar_slide' => true,
+'right_sidebar_push' => true,
+'right_sidebar_scrollbar_theme' => 'os-theme-light',
+'right_sidebar_scrollbar_auto_hide' => 'l',
     /*
     |--------------------------------------------------------------------------
     | URLs
@@ -275,12 +244,8 @@ return [
     'dashboard_url' => 'home',
     'logout_url' => 'logout',
     'login_url' => 'login',
-    'register_url' => false,
-    'password_reset_url' => 'password/reset',
-    'password_email_url' => 'password/email',
-    'profile_url' => false,
-    'disable_darkmode_routes' => false,
 
+    'register_url' => 'register',
     /*
     |--------------------------------------------------------------------------
     | Laravel Asset Bundling
@@ -312,6 +277,7 @@ return [
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
     |
     */
+<<<<<<< HEAD
 
     'menu' => [
 
@@ -579,29 +545,59 @@ return [
         //     'icon_color' => 'cyan',
         //     'url' => '#',
         // ],
+=======
+'menu' => [
+    [
+        'type' => 'navbar-search',
+        'text' => 'search',
+        'topnav_right' => true,
+    ],
+    [
+        'type' => 'fullscreen-widget',
+        'topnav_right' => true,
+>>>>>>> 1ed239d3ab59ec2bffcc96d7bf5657c37dc9be0e
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Menu Filters
-    |--------------------------------------------------------------------------
-    |
-    | Here we can modify the menu filters of the admin panel.
-    |
-    | For detailed instructions you can look the menu filters section here:
-    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
-    |
-    */
-
-    'filters' => [
-        GateFilter::class,
-        HrefFilter::class,
-        SearchFilter::class,
-        ActiveFilter::class,
-        ClassesFilter::class,
-        LangFilter::class,
-        DataFilter::class,
+    [
+        'text' => 'Dashboard',
+        'url'  => 'home',
+        'icon' => 'fas fa-home',
     ],
+
+    [
+        'text' => 'User Management',
+        'icon' => 'fas fa-users-cog',
+        'submenu' => [
+            [
+                'text' => 'All Users',
+                'url'  => 'users',
+                'icon' => 'fas fa-users',
+            ],
+            [
+                'text' => 'Add User',
+                'url'  => 'users/create',
+                'icon' => 'fas fa-user-plus',
+            ],
+        ],
+    ],
+
+    [
+        'text' => 'Roles',
+        'url'  => 'roles',
+        'icon' => 'fas fa-user-shield',
+    ],
+],
+
+
+'filters' => [
+    GateFilter::class,
+    HrefFilter::class,
+    SearchFilter::class,
+    ActiveFilter::class,
+    ClassesFilter::class,
+    LangFilter::class,
+    DataFilter::class,
+],
 
     /*
     |--------------------------------------------------------------------------
@@ -733,5 +729,6 @@ return [
     |
     */
 
-    'livewire' => false,
+'livewire' => false,
+],
 ];
