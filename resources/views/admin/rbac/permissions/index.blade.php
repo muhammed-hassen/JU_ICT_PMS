@@ -1,3 +1,4 @@
+{{-- resources/views/admin/rbac/permissions/index.blade.php --}}
 @extends('layouts.master')
 
 @section('subtitle', 'Permissions')
@@ -6,7 +7,7 @@
 
 @section('content_body')
 <div class="container-fluid">
-    <!-- Stats Cards Row -->
+    {{-- Stats Cards Row --}}
     <div class="row">
         <div class="col-lg-3 col-6">
             <div class="small-box bg-success">
@@ -58,7 +59,7 @@
         </div>
     </div>
 
-    <!-- Permissions Table Card -->
+    {{-- Permissions Table Card --}}
     <div class="card card-success card-outline">
         <div class="card-header">
             <h3 class="card-title">
@@ -83,11 +84,11 @@
                     <thead>
                         <tr>
                             <th width="5%" class="text-center">#</th>
-                            <th width="25%">Permission Name</th>
-                            <th width="20%">Module</th>
-                            <th width="35%">Description</th>
+                            <th width="22%">Permission Name</th>
+                            <th width="18%">Module</th>
+                            <th width="30%">Description</th>
                             <th width="10%" class="text-center">Roles</th>
-                            <th width="10%" class="text-center">Actions</th>
+                            <th width="15%" class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -101,14 +102,18 @@
                                 @php
                                     $moduleStyles = [
                                         'project' => ['color' => '#006633', 'bg' => '#e8f5e9', 'icon' => 'fa-project-diagram'],
+                                        'phase' => ['color' => '#0d6efd', 'bg' => '#e7f1ff', 'icon' => 'fa-layer-group'],
+                                        'task' => ['color' => '#fd7e14', 'bg' => '#fff3e0', 'icon' => 'fa-tasks'],
                                         'template' => ['color' => '#0d6efd', 'bg' => '#e7f1ff', 'icon' => 'fa-copy'],
-                                        'role' => ['color' => '#fd7e14', 'bg' => '#fff3e0', 'icon' => 'fa-users-cog'],
+                                        'organization' => ['color' => '#6f42c1', 'bg' => '#f3e8ff', 'icon' => 'fa-sitemap'],
+                                        'team' => ['color' => '#20c997', 'bg' => '#e8f8f0', 'icon' => 'fa-users'],
                                         'system' => ['color' => '#dc3545', 'bg' => '#ffe8e8', 'icon' => 'fa-cog'],
                                         'user' => ['color' => '#6f42c1', 'bg' => '#f3e8ff', 'icon' => 'fa-user'],
+                                        'activity' => ['color' => '#17a2b8', 'bg' => '#e3f4f7', 'icon' => 'fa-history'],
                                     ];
                                     $style = $moduleStyles[$permission->module] ?? ['color' => '#6c757d', 'bg' => '#f8f9fa', 'icon' => 'fa-tag'];
                                 @endphp
-                                <span class="module-badge">
+                                <span class="module-badge" style="background: {{ $style['bg'] }}; color: {{ $style['color'] }};">
                                     <i class="fas {{ $style['icon'] }} mr-1"></i>
                                     {{ ucfirst($permission->module) }}
                                 </span>
@@ -123,23 +128,33 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('admin.permissions.edit', $permission) }}" 
-                                       class="btn-action btn-edit" 
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {{-- SHOW BUTTON --}}
+                                    <a href="{{ route('admin.permissions.show', $permission) }}"
+                                       class="btn-action btn-show"
+                                       title="View Permission">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+
+                                    {{-- EDIT BUTTON --}}
+                                    <a href="{{ route('admin.permissions.edit', $permission) }}"
+                                       class="btn-action btn-edit"
                                        title="Edit Permission">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button type="button" 
-                                            class="btn-action btn-delete" 
+
+                                    {{-- DELETE BUTTON --}}
+                                    <button type="button"
+                                            class="btn-action btn-delete"
                                             title="Delete Permission"
                                             onclick="confirmDelete({{ $permission->id }}, '{{ $permission->name }}', {{ $permission->roles_count }})"
                                             {{ $permission->roles_count > 0 ? 'disabled' : '' }}>
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
-                                <form id="delete-form-{{ $permission->id }}" 
-                                      action="{{ route('admin.permissions.destroy', $permission) }}" 
-                                      method="POST" 
+                                <form id="delete-form-{{ $permission->id }}"
+                                      action="{{ route('admin.permissions.destroy', $permission) }}"
+                                      method="POST"
                                       class="d-none">
                                     @csrf
                                     @method('DELETE')
@@ -168,7 +183,7 @@
             <div class="row">
                 <div class="col-sm-12 col-md-5">
                     <div class="dataTables_info" role="status" aria-live="polite">
-                        Showing {{ $permissions->firstItem() }} to {{ $permissions->lastItem() }} 
+                        Showing {{ $permissions->firstItem() }} to {{ $permissions->lastItem() }}
                         of {{ $permissions->total() }} entries
                     </div>
                 </div>
@@ -186,15 +201,8 @@
 
 @push('css')
 <style>
-    /* ========== Clean Table Styling ========== */
-    .card-success.card-outline {
-        border-top: 3px solid #006633;
-    }
-    
-    .table {
-        margin-bottom: 0;
-    }
-    
+    .card-success.card-outline { border-top: 3px solid #006633; }
+    .table { margin-bottom: 0; }
     .table thead th {
         background: #fafbfc;
         color: #2c3e50;
@@ -206,19 +214,13 @@
         border-bottom: 1px solid #e9ecef;
         vertical-align: middle;
     }
-    
     .table tbody td {
         padding: 0.9rem 1rem;
         vertical-align: middle;
         border-bottom: 1px solid #f0f0f0;
         background: white;
     }
-    
-    .table tbody tr:hover td {
-        background: #fafbfc;
-    }
-    
-    /* Serial Number Badge */
+    .table tbody tr:hover td { background: #fafbfc; }
     .badge-light {
         background: #f0f0f0;
         color: #6c757d;
@@ -227,8 +229,6 @@
         border-radius: 20px;
         font-size: 0.75rem;
     }
-    
-    /* Permission Name Styling */
     .permission-name {
         background: #f8f9fa;
         color: #2c3e50;
@@ -239,8 +239,6 @@
         border: 1px solid #e9ecef;
         display: inline-block;
     }
-    
-    /* Module Badge - Consistent Soft Colors */
     .module-badge {
         display: inline-flex;
         align-items: center;
@@ -250,15 +248,11 @@
         font-weight: 500;
         letter-spacing: 0.3px;
     }
-    
-    /* Description Text */
     .description-text {
         color: #5a6e7c;
         font-size: 0.85rem;
         line-height: 1.4;
     }
-    
-    /* Roles Badge */
     .roles-badge {
         display: inline-flex;
         align-items: center;
@@ -270,8 +264,6 @@
         font-size: 0.8rem;
         font-weight: 500;
     }
-    
-    /* Action Buttons */
     .btn-action {
         display: inline-flex;
         align-items: center;
@@ -282,76 +274,60 @@
         transition: all 0.2s ease;
         margin: 0 2px;
         text-decoration: none;
+        border: none;
+        cursor: pointer;
     }
-    
+    .btn-show {
+        background: #e3f2fd;
+        color: #0d6efd;
+    }
+    .btn-show:hover {
+        background: #bbdefb;
+        color: #0a58ca;
+        transform: translateY(-2px);
+    }
     .btn-edit {
         background: #e8f5e9;
         color: #2e7d32;
-        border: none;
     }
-    
     .btn-edit:hover {
         background: #c8e6c9;
         color: #1b5e20;
         transform: translateY(-2px);
     }
-    
     .btn-delete {
         background: #ffebee;
         color: #c62828;
-        border: none;
     }
-    
     .btn-delete:hover:not(:disabled) {
         background: #ffcdd2;
         color: #b71c1c;
         transform: translateY(-2px);
     }
-    
     .btn-delete:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
-    
-    /* Stats Cards */
     .small-box {
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         transition: transform 0.3s ease;
     }
-    
-    .small-box:hover {
-        transform: translateY(-5px);
-    }
-    
-    .small-box .inner h3 a {
-        color: white;
-        text-decoration: none;
-    }
-    
-    /* Pagination */
+    .small-box:hover { transform: translateY(-5px); }
+    .small-box .inner h3 a { color: white; text-decoration: none; }
     .pagination .page-item.active .page-link {
         background-color: #006633;
         border-color: #006633;
     }
-    
-    .pagination .page-link {
-        color: #006633;
-    }
-    
-    .pagination .page-link:hover {
-        color: #004d26;
-    }
-    
-    /* Search Input */
-    .card-tools .input-group {
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
+    .pagination .page-link { color: #006633; }
+    .pagination .page-link:hover { color: #004d26; }
+    .card-tools .input-group { border-radius: 8px; overflow: hidden; }
     .card-tools .form-control:focus {
         border-color: #006633;
         box-shadow: none;
+    }
+    .btn-group .btn-action {
+        margin: 0 3px;
     }
 </style>
 @endpush
@@ -360,21 +336,18 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
-        // Live search functionality
         $("#permissionSearch").on("keyup", function() {
             var value = $(this).val().toLowerCase();
             $("#permissionsTable tbody tr").filter(function() {
                 $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
             });
         });
-        
-        // Clear search button
         $("#clearSearch").click(function() {
             $("#permissionSearch").val("");
             $("#permissionsTable tbody tr").show();
         });
     });
-    
+
     function confirmDelete(id, name, rolesCount) {
         if (rolesCount > 0) {
             Swal.fire({
@@ -387,7 +360,6 @@
             });
             return;
         }
-        
         Swal.fire({
             title: 'Delete Permission?',
             html: `Are you sure you want to delete <strong>${name}</strong>?<br><br>

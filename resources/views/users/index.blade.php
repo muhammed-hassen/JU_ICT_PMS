@@ -8,6 +8,8 @@
     </div>
 @stop
 
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+
 @section('content')
 
 <div class="card">
@@ -134,7 +136,7 @@
     {{ $users->links('pagination::simple-bootstrap-4') }}
 </div>
 </div>
-           
+
         </div>
 
     </div>

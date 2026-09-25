@@ -11,42 +11,59 @@ class ProjectTemplateReferenceSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ([
+        // ===== TASK PRIORITIES =====
+        $priorities = [
             ['name' => 'Low', 'level_order' => 1],
             ['name' => 'Medium', 'level_order' => 2],
             ['name' => 'High', 'level_order' => 3],
             ['name' => 'Critical', 'level_order' => 4],
-        ] as $priority) {
+        ];
+
+        foreach ($priorities as $priority) {
             TaskPriority::query()->updateOrCreate(
                 ['name' => $priority['name']],
                 ['level_order' => $priority['level_order']]
             );
         }
 
-        foreach ([
-            ['name' => 'Not Started', 'description' => 'Work has not started'],
-            ['name' => 'In Progress', 'description' => 'Work is underway'],
-            ['name' => 'Completed', 'description' => 'Work is finished'],
-            ['name' => 'Blocked', 'description' => 'Work is blocked'],
-        ] as $status) {
+        // ===== PHASE STATUSES =====
+        $phaseStatuses = [
+            ['name' => 'Not Started', 'description' => 'Phase has not started yet'],
+            ['name' => 'In Progress', 'description' => 'Phase is currently in progress'],
+            ['name' => 'Under Review', 'description' => 'Phase is under review'],
+            ['name' => 'Completed', 'description' => 'Phase has been completed'],
+            ['name' => 'Blocked', 'description' => 'Phase is blocked'],
+            ['name' => 'Cancelled', 'description' => 'Phase has been cancelled'],
+        ];
+
+        foreach ($phaseStatuses as $status) {
             PhaseStatus::query()->updateOrCreate(
                 ['name' => $status['name']],
                 ['description' => $status['description']]
             );
         }
 
-        foreach ([
-            ['name' => 'Not Started', 'description' => 'Work has not started'],
-            ['name' => 'In Progress', 'description' => 'Work is underway'],
-            ['name' => 'Under Review', 'description' => 'Work is under review'],
-            ['name' => 'Completed', 'description' => 'Work is finished'],
-            ['name' => 'Blocked', 'description' => 'Work is blocked'],
-            ['name' => 'Cancelled', 'description' => 'Work is cancelled'],
-        ] as $status) {
+        // ===== TASK STATUSES =====
+        $taskStatuses = [
+            ['name' => 'Not Started', 'description' => 'Task has not started yet'],
+            ['name' => 'In Progress', 'description' => 'Task is currently in progress'],
+            ['name' => 'Under Review', 'description' => 'Task is under review'],
+            ['name' => 'Completed', 'description' => 'Task has been completed'],
+            ['name' => 'Done', 'description' => 'Task is done'],
+            ['name' => 'Blocked', 'description' => 'Task is blocked'],
+            ['name' => 'Cancelled', 'description' => 'Task has been cancelled'],
+        ];
+
+        foreach ($taskStatuses as $status) {
             TaskStatus::query()->updateOrCreate(
                 ['name' => $status['name']],
                 ['description' => $status['description']]
             );
         }
+
+        $this->command->info('✅ Reference data seeded:');
+        $this->command->info('   - '.TaskPriority::count().' priorities');
+        $this->command->info('   - '.PhaseStatus::count().' phase statuses');
+        $this->command->info('   - '.TaskStatus::count().' task statuses');
     }
 }

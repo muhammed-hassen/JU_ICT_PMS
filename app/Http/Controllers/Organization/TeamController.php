@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,110 +14,176 @@ class TeamController extends Controller
 {
     public function index(): View
     {
-        $teams = Team::query()
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('view-teams')) {
+            abort(403, 'You do not have permission to view teams.');
+        }
+
+        $query = Team::query()
             ->with(['teamLeader', 'parentTeam'])
-            ->withCount(['members', 'childTeams', 'projects'])
-            ->orderBy('parent_team_id')
+            ->withCount(['members', 'childTeams', 'projects']);
+
+        if (! $user->isDirector()) {
+            $teamIds = $user->getTeamIds();
+
+            if (empty($teamIds)) {
+                $teams = Team::query()->whereRaw('1 = 0')->paginate(10);
+
+                return view('admin.organization.teams.index', compact('teams'));
+            }
+
+            $query->whereIn('id', $teamIds);
+        }
+
+        $teams = $query->orderBy('parent_team_id')
             ->orderBy('name')
             ->paginate(10);
 
         return view('admin.organization.teams.index', compact('teams'));
     }
 
+    public function show(Team $team): View
+    {
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('view-teams')) {
+            abort(403, 'You do not have permission to view teams.');
+        }
+
+        if (! $user->isDirector()) {
+            $teamIds = $user->getTeamIds();
+            if (! in_array($team->id, $teamIds)) {
+                abort(403, 'You do not have permission to view this team.');
+            }
+        }
+
+        $team->load(['teamLeader', 'parentTeam', 'childTeams', 'members', 'projects']);
+
+        return view('admin.organization.teams.show', compact('team'));
+    }
+
+    /**
+     * Show form to create a new team
+     */
     public function create(): View
     {
-        return view('admin.organization.teams.create', $this->formData(new Team));
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('manage-teams')) {
+            abort(403, 'You do not have permission to create teams.');
+        }
+
+        $leaders = User::whereHas('roles', function ($query) {
+            $query->where('name', 'Team Leader');
+        })->get();
+
+        $members = User::all();
+        $parentTeams = Team::all();
+        $team = new Team;
+
+        return view('admin.organization.teams.create', compact('leaders', 'members', 'parentTeams', 'team'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $this->validateTeam($request);
+        $user = auth()->user();
 
-        $team = Team::query()->create(collect($validated)->except('member_ids')->all());
-        $team->members()->sync($validated['member_ids'] ?? []);
+        if (! $user->hasPermissionTo('manage-teams')) {
+            abort(403, 'You do not have permission to create teams.');
+        }
 
-        return redirect()
-            ->route('admin.organization.teams.index')
-            ->with('status', 'Team created.');
-    }
-
-    public function show(Team $team): View
-    {
-        return view('admin.organization.teams.show', [
-            'team' => $team->load(['teamLeader', 'parentTeam', 'childTeams.teamLeader', 'members.roles', 'projects']),
+        $validated = $request->validate([
+            'name' => 'required|string|max:100|unique:teams',
+            'description' => 'nullable|string',
+            'team_leader_id' => 'nullable|exists:users,id',
+            'parent_team_id' => 'nullable|exists:teams,id',
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'exists:users,id',
         ]);
+
+        $team = Team::create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'team_leader_id' => $validated['team_leader_id'] ?? null,
+            'parent_team_id' => $validated['parent_team_id'] ?? null,
+        ]);
+
+        if (! empty($validated['member_ids'])) {
+            $team->members()->sync($validated['member_ids']);
+        }
+
+        return redirect()->route('admin.organization.teams.index')
+            ->with('success', 'Team created successfully.');
     }
 
     public function edit(Team $team): View
     {
-        return view('admin.organization.teams.edit', $this->formData($team->load('members')));
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('manage-teams')) {
+            abort(403, 'You do not have permission to edit teams.');
+        }
+
+        $leaders = User::whereHas('roles', function ($query) {
+            $query->where('name', 'Team Leader');
+        })->get();
+
+        $members = User::all();
+        $parentTeams = Team::where('id', '!=', $team->id)->get();
+
+        return view('admin.organization.teams.edit', compact('team', 'leaders', 'members', 'parentTeams'));
     }
 
     public function update(Request $request, Team $team): RedirectResponse
     {
-        $validated = $this->validateTeam($request, $team);
+        $user = auth()->user();
 
-        $team->update(collect($validated)->except('member_ids')->all());
-        $team->members()->sync($validated['member_ids'] ?? []);
+        if (! $user->hasPermissionTo('manage-teams')) {
+            abort(403, 'You do not have permission to update teams.');
+        }
 
-        return redirect()
-            ->route('admin.organization.teams.show', $team)
-            ->with('status', 'Team updated.');
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100', Rule::unique('teams')->ignore($team->id)],
+            'description' => 'nullable|string',
+            'team_leader_id' => 'nullable|exists:users,id',
+            'parent_team_id' => 'nullable|exists:teams,id',
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'exists:users,id',
+        ]);
+
+        $team->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'team_leader_id' => $validated['team_leader_id'] ?? null,
+            'parent_team_id' => $validated['parent_team_id'] ?? null,
+        ]);
+
+        if (isset($validated['member_ids'])) {
+            $team->members()->sync($validated['member_ids']);
+        } else {
+            $team->members()->detach();
+        }
+
+        return redirect()->route('admin.organization.teams.index')
+            ->with('success', 'Team updated successfully.');
     }
 
     public function destroy(Team $team): RedirectResponse
     {
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('manage-teams')) {
+            abort(403, 'You do not have permission to delete teams.');
+        }
+
         if ($team->childTeams()->exists() || $team->members()->exists() || $team->projects()->exists()) {
-            return redirect()
-                ->route('admin.organization.teams.index')
-                ->with('error', 'This team still has child teams, members, or projects.');
+            return back()->with('error', 'Cannot delete team with existing relationships.');
         }
 
-        try {
-            $team->delete();
-        } catch (QueryException) {
-            return redirect()
-                ->route('admin.organization.teams.index')
-                ->with('error', 'This team is still referenced and cannot be deleted.');
-        }
+        $team->delete();
 
-        return redirect()
-            ->route('admin.organization.teams.index')
-            ->with('status', 'Team deleted.');
-    }
-
-    protected function formData(Team $team): array
-    {
-        return [
-            'team' => $team,
-            'leaders' => User::role('Team Leader')->orderBy('name')->get(),
-            'parentTeams' => Team::query()
-                ->when($team->exists, fn ($query) => $query->whereKeyNot($team->id))
-                ->orderBy('name')
-                ->get(),
-            'members' => User::role('Team Member')->orderBy('name')->get(),
-        ];
-    }
-
-    protected function validateTeam(Request $request, ?Team $team = null): array
-    {
-        return $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:100',
-                Rule::unique('teams', 'name')->ignore($team?->id),
-            ],
-            'description' => ['nullable', 'string'],
-            'team_leader_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'parent_team_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('teams', 'id'),
-                Rule::notIn([$team?->id]),
-            ],
-            'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', Rule::exists('users', 'id')],
-        ]);
+        return redirect()->route('admin.organization.teams.index')
+            ->with('success', 'Team deleted successfully.');
     }
 }

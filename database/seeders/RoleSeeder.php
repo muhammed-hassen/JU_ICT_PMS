@@ -14,10 +14,18 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
+        // Reset cached roles and permissions
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
         $guardName = config('rbac.guard_name', 'web');
+
+        // Get all permission names
         $allPermissionNames = Permission::query()->pluck('name')->all();
 
-        foreach (config('rbac.roles', []) as $roleName => $roleConfig) {
+        // Get roles from config
+        $roles = config('rbac.roles', []);
+
+        foreach ($roles as $roleName => $roleConfig) {
             $role = Role::query()->updateOrCreate(
                 [
                     'name' => $roleName,
@@ -28,13 +36,18 @@ class RoleSeeder extends Seeder
                 ]
             );
 
-            $permissions = $roleConfig['permissions'] === '*'
-                ? $allPermissionNames
-                : $roleConfig['permissions'];
+            // Assign permissions
+            $permissions = $roleConfig['permissions'] ?? [];
 
-            $role->syncPermissions($permissions);
+            // If permissions is '*', give ALL permissions
+            if ($permissions === '*') {
+                $role->syncPermissions($allPermissionNames);
+            } else {
+                $role->syncPermissions($permissions);
+            }
         }
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        // Clear cache again
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }

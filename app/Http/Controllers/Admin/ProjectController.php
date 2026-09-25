@@ -1,5 +1,7 @@
 <?php
 
+// app/Http/Controllers/Admin/ProjectController.php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -18,19 +20,44 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth']);
+        $this->middleware('permission:view-projects')->only(['index', 'show']);
+        $this->middleware('permission:create-project')->only(['create', 'store']);
+        $this->middleware('permission:edit-project')->only(['edit', 'update']);
+        $this->middleware('permission:delete-project')->only(['destroy']);
+    }
+
     public function index(): View
     {
-        $projects = Project::query()
+        $user = auth()->user();
+
+        $query = Project::query()
             ->with(['template', 'creator', 'phases', 'teams'])
-            ->withCount('phases')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->withCount('phases');
+
+        if (! $user->isDirector()) {
+            $projectIds = $user->getVisibleProjectIds();
+            if (empty($projectIds)) {
+                $projectIds = [0];
+            }
+            $query->whereIn('id', $projectIds);
+        }
+
+        $projects = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return view('admin.projects.index', compact('projects'));
     }
 
     public function create(): View
     {
+        $user = auth()->user();
+
+        if (! $user->isDirector() && ! $user->isTeamLeader()) {
+            abort(403, 'You do not have permission to create projects.');
+        }
+
         $templates = ProjectTemplate::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -49,6 +76,12 @@ class ProjectController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $user = auth()->user();
+
+        if (! $user->isDirector() && ! $user->isTeamLeader()) {
+            abort(403, 'You do not have permission to create projects.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
@@ -69,6 +102,7 @@ class ProjectController extends Controller
                 'status' => 'draft',
                 'start_date' => $validated['start_date'] ?? null,
                 'end_date' => $validated['end_date'] ?? null,
+                'progress_percentage' => 0,
                 'created_by' => $request->user()->id,
                 'updated_by' => null,
             ]);
@@ -88,22 +122,86 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('admin.projects.index')
-            ->with('status', 'Project created successfully.');
+            ->with('success', 'Project created successfully.');
     }
 
+    /**
+     * Display a specific project with progress tracking
+     */
     public function show(Project $project): View
     {
-        $project->load(['phases.tasks', 'template', 'teams', 'members', 'creator']);
+        $user = auth()->user();
+
+        if (! $user->isDirector()) {
+            $visibleProjectIds = $user->getVisibleProjectIds();
+            if (! in_array($project->id, $visibleProjectIds)) {
+                abort(403, 'You do not have permission to view this project.');
+            }
+        }
+
+        // Load project with relationships
+        $project->load([
+            'phases' => function ($query) {
+                $query->orderBy('sort_order');
+            },
+            'phases.tasks' => function ($query) {
+                $query->orderBy('sort_order');
+            },
+            'phases.tasks.status',
+            'phases.tasks.priority',
+            'phases.tasks.assignee',
+            'phases.status',
+            'template',
+            'teams',
+            'members',
+            'creator',
+            'progressHistory' => function ($query) {
+                $query->take(7);
+            },
+        ]);
+
+        // Get all progress data
+        $progressTrend = $project->getProgressTrendAttribute();
+        $phaseBreakdown = $project->getPhaseProgressBreakdownAttribute();
+        $timelineData = $project->getTimelineDataAttribute();
+        $progressStats = $project->getProgressStatsAttribute();
+
+        // Filter tasks based on user permissions
+        if (! $user->isDirector()) {
+            $visibleTaskIds = $user->getVisibleTaskIds();
+            foreach ($project->phases as $phase) {
+                $phase->tasks = $phase->tasks->filter(function ($task) use ($visibleTaskIds) {
+                    return in_array($task->id, $visibleTaskIds);
+                });
+            }
+        }
 
         $phaseStatuses = PhaseStatus::all();
         $taskStatuses = TaskStatus::all();
         $taskPriorities = TaskPriority::all();
 
-        return view('admin.projects.show', compact('project', 'phaseStatuses', 'taskStatuses', 'taskPriorities'));
+        return view('admin.projects.show', compact(
+            'project',
+            'phaseStatuses',
+            'taskStatuses',
+            'taskPriorities',
+            'progressTrend',
+            'phaseBreakdown',
+            'timelineData',
+            'progressStats'
+        ));
     }
 
     public function edit(Project $project): View
     {
+        $user = auth()->user();
+
+        if (! $user->isDirector()) {
+            if ($user->isTeamLeader() && $project->created_by !== $user->id) {
+                abort(403, 'You can only edit projects you created.');
+            }
+        }
+
         $templates = ProjectTemplate::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -122,6 +220,14 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project): RedirectResponse
     {
+        $user = auth()->user();
+
+        if (! $user->isDirector()) {
+            if ($user->isTeamLeader() && $project->created_by !== $user->id) {
+                abort(403, 'You can only edit projects you created.');
+            }
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'description' => 'nullable|string',
@@ -155,16 +261,21 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('admin.projects.show', $project)
-            ->with('status', 'Project updated successfully.');
+            ->with('success', 'Project updated successfully.');
     }
 
     public function destroy(Project $project): RedirectResponse
     {
+        $user = auth()->user();
+
+        if (! $user->isDirector()) {
+            abort(403, 'You do not have permission to delete projects.');
+        }
+
         $project->delete();
 
         return redirect()
             ->route('admin.projects.index')
-            ->with('status', 'Project deleted successfully.');
+            ->with('success', 'Project deleted successfully.');
     }
-
 }

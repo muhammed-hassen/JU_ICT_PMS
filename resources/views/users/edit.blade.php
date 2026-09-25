@@ -6,6 +6,8 @@
     <h1>Edit User</h1>
 @stop
 
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+
 @section('content')
 
 <div class="row justify-content-center">

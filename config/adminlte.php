@@ -22,9 +22,9 @@ return [
     |
     */
 
-'title' => 'JU ICT PMS',
-'title_prefix' => '',
-'title_postfix' => '',
+    'title' => 'JU ICT PMS',
+    'title_prefix' => '',
+    'title_postfix' => '',
 
     /*
     |--------------------------------------------------------------------------
@@ -71,7 +71,7 @@ return [
     |
     */
 
-'logo' => '<b>JU-</b><b>ICT</b>-PMS',
+    'logo' => '<b>JU-</b><b>ICT</b>-PMS',
 
     /*
     |--------------------------------------------------------------------------
@@ -113,8 +113,17 @@ return [
     */
 
     'preloader' => [
+        'enabled' => true,
+        'mode' => 'fullscreen',
+        'img' => [
+            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+            'alt' => 'AdminLTE Preloader Image',
+            'effect' => 'animation__pulse',
+            'width' => 60,
+            'height' => 60,
+        ],
+    ],
 
-'enabled' => true,
     /*
     |--------------------------------------------------------------------------
     | User Menu
@@ -165,13 +174,14 @@ return [
     |
     */
 
-'classes_auth_card' => 'card-outline card-primary',
-'classes_auth_header' => '',
-'classes_auth_body' => '',
-'classes_auth_footer' => '',
-'classes_auth_icon' => '',
-'classes_auth_btn' => 'btn-flat btn-primary',
-/*
+    'classes_auth_card' => 'card-outline card-primary',
+    'classes_auth_header' => '',
+    'classes_auth_body' => '',
+    'classes_auth_footer' => '',
+    'classes_auth_icon' => '',
+    'classes_auth_btn' => 'btn-flat btn-primary',
+
+    /*
     |--------------------------------------------------------------------------
     | Admin Panel Classes
     |--------------------------------------------------------------------------
@@ -184,13 +194,14 @@ return [
     */
 
     'classes_body' => '',
-'classes_brand' => '',
-'classes_brand_text' => '',
-'classes_content_wrapper' => '',
-'classes_content_header' => '',
-'classes_content' => '',
-'classes_sidebar' => 'sidebar-dark-primary elevation-4',
-/*
+    'classes_brand' => '',
+    'classes_brand_text' => '',
+    'classes_content_wrapper' => '',
+    'classes_content_header' => '',
+    'classes_content' => '',
+    'classes_sidebar' => 'sidebar-dark-primary elevation-4',
+
+    /*
     |--------------------------------------------------------------------------
     | Sidebar
     |--------------------------------------------------------------------------
@@ -207,8 +218,8 @@ return [
     'sidebar_collapse_auto_size' => false,
     'sidebar_collapse_remember' => false,
     'sidebar_collapse_remember_no_transition' => true,
-'right_sidebar_theme' => 'dark',
-/*
+
+    /*
     |--------------------------------------------------------------------------
     | Control Sidebar (Right Sidebar)
     |--------------------------------------------------------------------------
@@ -222,12 +233,12 @@ return [
 
     'right_sidebar' => false,
     'right_sidebar_icon' => 'fas fa-cogs',
+    'right_sidebar_theme' => 'dark',
+    'right_sidebar_slide' => true,
+    'right_sidebar_push' => true,
+    'right_sidebar_scrollbar_theme' => 'os-theme-light',
+    'right_sidebar_scrollbar_auto_hide' => 'l',
 
-'right_sidebar_theme' => 'dark',
-'right_sidebar_slide' => true,
-'right_sidebar_push' => true,
-'right_sidebar_scrollbar_theme' => 'os-theme-light',
-'right_sidebar_scrollbar_auto_hide' => 'l',
     /*
     |--------------------------------------------------------------------------
     | URLs
@@ -244,8 +255,8 @@ return [
     'dashboard_url' => 'home',
     'logout_url' => 'logout',
     'login_url' => 'login',
-
     'register_url' => 'register',
+
     /*
     |--------------------------------------------------------------------------
     | Laravel Asset Bundling
@@ -277,57 +288,354 @@ return [
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
     |
     */
-'menu' => [
-    [
-        'type' => 'navbar-search',
-        'text' => 'search',
-        'topnav_right' => true,
-    ],
-    [
-        'type' => 'fullscreen-widget',
-        'topnav_right' => true,
-    ],
 
-    [
-        'text' => 'Dashboard',
-        'url'  => 'home',
-        'icon' => 'fas fa-home',
-    ],
+    // config/adminlte.php - COMPLETE MENU
 
-    [
-        'text' => 'User Management',
-        'icon' => 'fas fa-users-cog',
-        'submenu' => [
-            [
-                'text' => 'All Users',
-                'url'  => 'users',
-                'icon' => 'fas fa-users',
+    // config/adminlte.php - Complete Menu with Permission Checks
+
+    'menu' => [
+        // ============================================================
+        // DASHBOARD - ALL USERS
+        // ============================================================
+        [
+            'text' => 'Dashboard',
+            'url' => 'home',
+            'icon' => 'fas fa-tachometer-alt',
+        ],
+
+        // ============================================================
+        // MY TASKS - ALL USERS (with view-tasks permission)
+        // ============================================================
+        [
+            'text' => 'My Tasks',
+            'url' => 'admin/tasks/my',
+            'icon' => 'fas fa-tasks',
+            'label' => 'New',
+            'label_color' => 'danger',
+            'can' => 'view-tasks',  // ← STRONG RBAC
+        ],
+
+        // ============================================================
+        // PROJECT MANAGEMENT HEADER
+        // ============================================================
+        [
+            'header' => 'PROJECT MANAGEMENT',
+        ],
+
+        // ============================================================
+        // PROJECTS - ALL USERS (with view-projects permission)
+        // ============================================================
+        [
+            'text' => 'Projects',
+            'icon' => 'fas fa-project-diagram',
+            'can' => 'view-projects',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Projects',
+                    'url' => 'admin/projects',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-projects',  // ← STRONG RBAC
+                    'active' => ['admin/projects*'],
+                ],
+                [
+                    'text' => 'Create Project',
+                    'url' => 'admin/projects/create',
+                    'icon' => 'fas fa-plus-circle',
+                    'can' => 'create-project',  // ← STRONG RBAC
+                    'active' => ['admin/projects/create*'],
+                ],
             ],
-            [
-                'text' => 'Add User',
-                'url'  => 'users/create',
-                'icon' => 'fas fa-user-plus',
+        ],
+
+        // ============================================================
+        // PHASE MANAGEMENT - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'text' => 'Phase Management',
+            'icon' => 'fas fa-layer-group',
+            'can' => 'view-phases',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Phases',
+                    'url' => 'admin/phases',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-phases',  // ← STRONG RBAC
+                    'active' => ['admin/phases*'],
+                ],
+                [
+                    'text' => 'Create Phase',
+                    'url' => 'admin/phases/create',
+                    'icon' => 'fas fa-plus-circle',
+                    'can' => 'create-phase',  // ← STRONG RBAC
+                    'active' => ['admin/phases/create*'],
+                ],
             ],
+        ],
+
+        // ============================================================
+        // TASK MANAGEMENT - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'text' => 'Task Management',
+            'icon' => 'fas fa-tasks',
+            'can' => 'view-tasks',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Tasks',
+                    'url' => 'admin/tasks',
+                    'icon' => 'fas fa-list-check',
+                    'can' => 'view-all-tasks',  // ← STRONG RBAC (DIRECTORS ONLY)
+                    'active' => ['admin/tasks*'],
+                ],
+                [
+                    'text' => 'Board View',
+                    'url' => 'admin/tasks/kanban',
+                    'icon' => 'fas fa-columns',
+                    'can' => 'view-tasks',  // ← STRONG RBAC
+                    'active' => ['admin/tasks/kanban*'],
+                ],
+                [
+                    'text' => 'My Tasks',
+                    'url' => 'admin/tasks/my',
+                    'icon' => 'fas fa-user-check',
+                    'active' => ['admin/tasks/my*'],
+                ],
+                [
+                    'text' => 'Overdue Tasks',
+                    'url' => 'admin/tasks?overdue=1',
+                    'icon' => 'fas fa-exclamation-triangle',
+                    'can' => 'view-all-tasks',  // ← STRONG RBAC (DIRECTORS ONLY)
+                    'label' => 'Overdue',
+                    'label_color' => 'danger',
+                    'active' => ['admin/tasks*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // PROJECT TEMPLATES - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'text' => 'Project Templates',
+            'url' => 'admin/templates',
+            'icon' => 'fas fa-copy',
+            'can' => 'view-templates',  // ← STRONG RBAC
+            'active' => ['admin/templates*'],
+        ],
+
+        // ============================================================
+        // ORGANIZATION HEADER - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'header' => 'ORGANIZATION',
+            'can' => 'view-organization-structure',  // ← STRONG RBAC
+        ],
+
+        // ============================================================
+        // TEAMS - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'text' => 'Teams',
+            'icon' => 'fas fa-users',
+            'can' => 'view-teams',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Teams',
+                    'url' => 'admin/organization/teams',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-teams',  // ← STRONG RBAC
+                    'active' => ['admin/organization/teams*'],
+                ],
+                [
+                    'text' => 'Create Team',
+                    'url' => 'admin/organization/teams/create',
+                    'icon' => 'fas fa-plus-circle',
+                    'can' => 'manage-teams',  // ← STRONG RBAC
+                    'active' => ['admin/organization/teams/create*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // MEMBERS - DIRECTORS & TEAM LEADERS
+        // ============================================================
+        [
+            'text' => 'Members',
+            'icon' => 'fas fa-user-friends',
+            'can' => 'view-members',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Members',
+                    'url' => 'admin/organization/members',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-members',  // ← STRONG RBAC
+                    'active' => ['admin/organization/members*'],
+                ],
+                [
+                    'text' => 'Add Member',
+                    'url' => 'admin/organization/members/create',
+                    'icon' => 'fas fa-user-plus',
+                    'can' => 'manage-members',  // ← STRONG RBAC
+                    'active' => ['admin/organization/members/create*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // DIRECTORS - DIRECTORS ONLY
+        // ============================================================
+        [
+            'text' => 'Directors',
+            'icon' => 'fas fa-user-tie',
+            'can' => 'view-directors',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Directors',
+                    'url' => 'admin/organization/directors',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-directors',  // ← STRONG RBAC
+                    'active' => ['admin/organization/directors*'],
+                ],
+                [
+                    'text' => 'Add Director',
+                    'url' => 'admin/organization/directors/create',
+                    'icon' => 'fas fa-user-plus',
+                    'can' => 'manage-directors',  // ← STRONG RBAC
+                    'active' => ['admin/organization/directors/create*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // TEAM LEADERS - DIRECTORS ONLY
+        // ============================================================
+        [
+            'text' => 'Team Leaders',
+            'icon' => 'fas fa-user-shield',
+            'can' => 'view-team-leaders',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Team Leaders',
+                    'url' => 'admin/organization/team-leaders',
+                    'icon' => 'fas fa-list',
+                    'can' => 'view-team-leaders',  // ← STRONG RBAC
+                    'active' => ['admin/organization/team-leaders*'],
+                ],
+                [
+                    'text' => 'Add Team Leader',
+                    'url' => 'admin/organization/team-leaders/create',
+                    'icon' => 'fas fa-user-plus',
+                    'can' => 'manage-team-leaders',  // ← STRONG RBAC
+                    'active' => ['admin/organization/team-leaders/create*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // ADMINISTRATION HEADER - DIRECTORS ONLY
+        // ============================================================
+        [
+            'header' => 'ADMINISTRATION',
+            'can' => 'access-admin',  // ← STRONG RBAC
+        ],
+
+        // ============================================================
+        // ROLES & PERMISSIONS - DIRECTORS ONLY
+        // ============================================================
+        [
+            'text' => 'Roles & Permissions',
+            'icon' => 'fas fa-shield-alt',
+            'can' => 'access-admin',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'Roles',
+                    'url' => 'admin/roles',
+                    'icon' => 'fas fa-users-cog',
+                    'can' => 'access-admin',  // ← STRONG RBAC
+                    'active' => ['admin/roles*'],
+                ],
+                [
+                    'text' => 'Permissions',
+                    'url' => 'admin/permissions',
+                    'icon' => 'fas fa-key',
+                    'can' => 'configure-system',  // ← STRONG RBAC
+                    'active' => ['admin/permissions*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // USER MANAGEMENT - DIRECTORS ONLY
+        // ============================================================
+        [
+            'text' => 'User Management',
+            'icon' => 'fas fa-users-cog',
+            'can' => 'access-admin',  // ← STRONG RBAC
+            'submenu' => [
+                [
+                    'text' => 'All Users',
+                    'url' => 'users',
+                    'icon' => 'fas fa-users',
+                    'can' => 'access-admin',  // ← STRONG RBAC
+                    'active' => ['users*'],
+                ],
+                [
+                    'text' => 'Add User',
+                    'url' => 'users/create',
+                    'icon' => 'fas fa-user-plus',
+                    'can' => 'access-admin',  // ← STRONG RBAC
+                    'active' => ['users/create*'],
+                ],
+            ],
+        ],
+
+        // ============================================================
+        // ACTIVITY LOG - DIRECTORS ONLY
+        // ============================================================
+        [
+            'text' => 'Activity Log',
+            'url' => 'admin/activity',
+            'icon' => 'fas fa-history',
+            'can' => 'view-audit-logs',  // ← STRONG RBAC
+            'active' => ['admin/activity*'],
+        ],
+
+        // ============================================================
+        // RIGHT SIDEBAR NAVBAR ITEMS
+        // ============================================================
+        [
+            'type' => 'navbar-search',
+            'text' => 'Search',
+            'topnav_right' => true,
+        ],
+        [
+            'type' => 'fullscreen-widget',
+            'text' => 'Fullscreen',
+            'topnav_right' => true,
         ],
     ],
 
-    [
-        'text' => 'Roles',
-        'url'  => 'roles',
-        'icon' => 'fas fa-user-shield',
+    /*
+    |--------------------------------------------------------------------------
+    | Menu Filters
+    |--------------------------------------------------------------------------
+    |
+    | Here we can modify the menu filters of the admin panel.
+    |
+    | For detailed instructions you can look the menu filters section here:
+    | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
+    |
+    */
+
+    'filters' => [
+        GateFilter::class,
+        HrefFilter::class,
+        SearchFilter::class,
+        ActiveFilter::class,
+        ClassesFilter::class,
+        LangFilter::class,
+        DataFilter::class,
     ],
-],
-
-
-'filters' => [
-    GateFilter::class,
-    HrefFilter::class,
-    SearchFilter::class,
-    ActiveFilter::class,
-    ClassesFilter::class,
-    LangFilter::class,
-    DataFilter::class,
-],
 
     /*
     |--------------------------------------------------------------------------
@@ -459,6 +767,5 @@ return [
     |
     */
 
-'livewire' => false,
-],
+    'livewire' => false,
 ];

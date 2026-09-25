@@ -1,4 +1,5 @@
 @extends('adminlte::page')
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
 
 @push('css')
 <style>

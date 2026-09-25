@@ -130,4 +130,11 @@ class RoleController extends Controller
             ->get()
             ->groupBy('module');
     }
+
+    public function show(Role $role): View
+    {
+        $role->load(['permissions', 'users']);
+
+        return view('admin.rbac.roles.show', compact('role'));
+    }
 }

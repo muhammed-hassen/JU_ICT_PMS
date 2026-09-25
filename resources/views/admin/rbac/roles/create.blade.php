@@ -3,7 +3,7 @@
 @section('subtitle', 'Create Role')
 @section('content_header_title', 'Create Role')
 @section('content_header_subtitle', 'Define a role and assign permissions')
-
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
 @section('content_body')
     <div class="card">
         <form action="{{ route('admin.roles.store') }}" method="POST">

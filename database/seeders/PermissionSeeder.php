@@ -39,5 +39,7 @@ class PermissionSeeder extends Seeder
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->command->info('✅ '.Permission::count().' permissions seeded');
     }
 }

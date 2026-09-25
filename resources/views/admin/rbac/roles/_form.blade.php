@@ -1,7 +1,7 @@
 @php
     $selectedPermissions = old('permissions', $selectedPermissions ?? []);
 @endphp
-
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
 <div class="card-body">
     <div class="form-group">
         <label for="name">Role Name</label>

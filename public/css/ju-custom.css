@@ -1077,3 +1077,114 @@ table.dataTable thead td {
   .ju-auth-logo-halo img  { width: 74px; height: 74px; }
   .ju-auth-branding h1 { font-size: 1.5rem; }
 }
+
+/* ── FIX: AdminLTE Layout Overrides ───────────────────────── */
+/* Restore AdminLTE layout structure */
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh !important;
+    z-index: 1030;
+    overflow-y: auto;
+}
+
+.content-wrapper {
+    margin-left: 250px;
+    min-height: 100vh !important;
+    padding-top: 58px;
+    flex: 1;
+}
+
+.main-header {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1035;
+    width: 100%;
+}
+
+.main-footer {
+    margin-left: 250px;
+    padding: 1rem;
+}
+
+/* Fix for body padding when sidebar is collapsed */
+body:not(.sidebar-collapse) .content-wrapper {
+    margin-left: 250px;
+}
+
+body.sidebar-collapse .content-wrapper {
+    margin-left: 60px;
+}
+
+body.sidebar-collapse .main-footer {
+    margin-left: 60px;
+}
+
+/* Ensure sidebar wrapper fills height */
+.sidebar-wrapper {
+    height: calc(100vh - 58px) !important;
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+
+/* Fix small box hover animation */
+.small-box {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.small-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(15,56,114,0.20);
+}
+
+/* Fix table responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Fix card header alignment */
+.card-header .card-title {
+    display: inline-block;
+    line-height: 1.5;
+}
+
+.card-tools {
+    float: right;
+    margin-top: -0.2rem;
+}
+
+/* Just force wrapping without changing size */
+.card-footer .pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+}
+
+.card-footer .pagination .page-item {
+    margin: 3px;
+}
+
+.card-footer .d-flex {
+    flex-wrap: wrap !important;
+}
+
+@media (max-width: 576px) {
+    .card-footer .d-flex {
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    .card-footer .text-muted {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+}
+

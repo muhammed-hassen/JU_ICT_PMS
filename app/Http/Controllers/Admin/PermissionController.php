@@ -106,4 +106,11 @@ class PermissionController extends Controller
             ->route('admin.permissions.index')
             ->with('status', 'Permission deleted.');
     }
+
+    public function show(Permission $permission): View
+    {
+        $permission->load('roles');
+
+        return view('admin.rbac.permissions.show', compact('permission'));
+    }
 }

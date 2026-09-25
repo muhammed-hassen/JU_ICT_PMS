@@ -6,6 +6,8 @@
     <h1>Create New User</h1>
 @stop
 
+<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+
 @section('content')
 
 <div class="row">

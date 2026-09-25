@@ -6,127 +6,174 @@ use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class MemberController extends Controller
 {
     public function index(): View
     {
-        $members = User::role('Team Member')
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('view-members')) {
+            abort(403, 'You do not have permission to view members.');
+        }
+
+        $query = User::query()
             ->with('teams')
-            ->orderBy('name')
-            ->paginate(10);
+            ->orderBy('name');
+
+        if (! $user->isDirector()) {
+            $teamIds = $user->getTeamIds();
+            if (empty($teamIds)) {
+                $members = User::query()->whereRaw('1 = 0')->paginate(10);
+
+                return view('admin.organization.members.index', compact('members'));
+            }
+            $query->whereHas('teams', function ($q) use ($teamIds) {
+                $q->whereIn('teams.id', $teamIds);
+            });
+        }
+
+        $members = $query->paginate(10);
 
         return view('admin.organization.members.index', compact('members'));
     }
 
+    /**
+     * Show form to create a new member
+     */
     public function create(): View
     {
-        return view('admin.organization.members.create', $this->formData(new User));
+        $user = auth()->user();
+
+        if (! $user->hasPermissionTo('manage-members')) {
+            abort(403, 'You do not have permission to create members.');
+        }
+
+        $teams = Team::all();
+        $member = new User;
+
+        return view('admin.organization.members.create', compact('teams', 'member'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $this->validateMember($request);
+        $user = auth()->user();
 
-        $member = User::query()->create([
+        if (! $user->hasPermissionTo('manage-members')) {
+            abort(403, 'You do not have permission to create members.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'team_ids' => 'nullable|array',
+            'team_ids.*' => 'exists:teams,id',
+        ]);
+
+        $member = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'],
+            'password' => bcrypt($validated['password']),
             'email_verified_at' => now(),
         ]);
 
-        $member->syncRoles(['Team Member']);
-        $member->teams()->sync($validated['team_ids'] ?? []);
+        $member->assignRole('Team Member');
 
-        return redirect()
-            ->route('admin.organization.members.index')
-            ->with('status', 'Member created.');
+        if (! empty($validated['team_ids'])) {
+            $member->teams()->sync($validated['team_ids']);
+        }
+
+        return redirect()->route('admin.organization.members.index')
+            ->with('success', 'Member created successfully.');
     }
 
     public function show(User $member): View
     {
-        $this->ensureRole($member);
+        $user = auth()->user();
 
-        return view('admin.organization.members.show', [
-            'member' => $member->load(['teams.teamLeader', 'roles']),
-        ]);
+        if (! $user->hasPermissionTo('view-members')) {
+            abort(403, 'You do not have permission to view members.');
+        }
+
+        if (! $user->isDirector()) {
+            $teamIds = $user->getTeamIds();
+            $userTeams = $member->teams()->pluck('teams.id')->toArray();
+            if (empty(array_intersect($teamIds, $userTeams))) {
+                abort(403, 'You do not have permission to view this member.');
+            }
+        }
+
+        $member->load('teams');
+
+        return view('admin.organization.members.show', compact('member'));
     }
 
     public function edit(User $member): View
     {
-        $this->ensureRole($member);
+        $user = auth()->user();
 
-        return view('admin.organization.members.edit', $this->formData($member->load('teams')));
+        if (! $user->hasPermissionTo('manage-members')) {
+            abort(403, 'You do not have permission to edit members.');
+        }
+
+        $teams = Team::all();
+        $member->load('teams');
+
+        return view('admin.organization.members.edit', compact('member', 'teams'));
     }
 
     public function update(Request $request, User $member): RedirectResponse
     {
-        $this->ensureRole($member);
+        $user = auth()->user();
 
-        $validated = $this->validateMember($request, $member);
+        if (! $user->hasPermissionTo('manage-members')) {
+            abort(403, 'You do not have permission to update members.');
+        }
 
-        $member->update(array_filter([
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$member->id,
+            'password' => 'nullable|string|min:8|confirmed',
+            'team_ids' => 'nullable|array',
+            'team_ids.*' => 'exists:teams,id',
+        ]);
+
+        $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'] ?? null,
-        ], fn ($value) => $value !== null));
+        ];
 
-        $member->syncRoles(['Team Member']);
-        $member->teams()->sync($validated['team_ids'] ?? []);
+        if (! empty($validated['password'])) {
+            $updateData['password'] = bcrypt($validated['password']);
+        }
 
-        return redirect()
-            ->route('admin.organization.members.show', $member)
-            ->with('status', 'Member updated.');
+        $member->update($updateData);
+
+        if (isset($validated['team_ids'])) {
+            $member->teams()->sync($validated['team_ids']);
+        } else {
+            $member->teams()->detach();
+        }
+
+        return redirect()->route('admin.organization.members.index')
+            ->with('success', 'Member updated successfully.');
     }
 
     public function destroy(User $member): RedirectResponse
     {
-        $this->ensureRole($member);
+        $user = auth()->user();
 
-        try {
-            $member->teams()->detach();
-            $member->delete();
-        } catch (QueryException) {
-            return redirect()
-                ->route('admin.organization.members.index')
-                ->with('error', 'This member is still referenced and cannot be deleted.');
+        if (! $user->hasPermissionTo('manage-members')) {
+            abort(403, 'You do not have permission to delete members.');
         }
 
-        return redirect()
-            ->route('admin.organization.members.index')
-            ->with('status', 'Member deleted.');
-    }
+        $member->teams()->detach();
+        $member->delete();
 
-    protected function formData(User $member): array
-    {
-        return [
-            'member' => $member,
-            'teams' => Team::query()->orderBy('name')->get(),
-        ];
-    }
-
-    protected function validateMember(Request $request, ?User $member = null): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->ignore($member?->id),
-            ],
-            'password' => [$member?->exists ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
-            'team_ids' => ['nullable', 'array'],
-            'team_ids.*' => ['integer', Rule::exists('teams', 'id')],
-        ]);
-    }
-
-    protected function ensureRole(User $member): void
-    {
-        abort_unless($member->hasRole('Team Member'), 404);
+        return redirect()->route('admin.organization.members.index')
+            ->with('success', 'Member deleted successfully.');
     }
 }
