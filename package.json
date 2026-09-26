@@ -1,0 +1,18 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "npm run build:legacy && npm run build:css",
+        "build:legacy": "sass resources/sass/bootstrap-legacy.scss resources/css/legacy/bootstrap.css --no-source-map --quiet-deps --silence-deprecation=import,global-builtin,color-functions,mixed-decls && node scripts/soften-bootstrap-utilities.mjs resources/css/legacy/bootstrap.css",
+        "build:css": "tailwindcss -i resources/css/ju.css -o public/css/ju.css --minify",
+        "watch:css": "tailwindcss -i resources/css/ju.css -o public/css/ju.css --watch"
+    },
+    "devDependencies": {
+        "@tailwindcss/cli": "^4.3.3",
+        "bootstrap": "^4.6.2",
+        "lucide": "^1.48.0",
+        "sass": "^1.56.1",
+        "tailwindcss": "^4.0.0"
+    }
+}
