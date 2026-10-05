@@ -2,20 +2,56 @@
 
 namespace App\Models;
 
+use App\Services\ActivityLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
     use SoftDeletes;
 
+    /** Fields whose change is worth a line in the activity log. Progress changes are recorded in project_progress_history instead. */
+    private const LOGGED_FIELDS = ['name', 'description', 'objectives', 'budget', 'status', 'start_date', 'end_date'];
+
+    protected static function booted(): void
+    {
+        // Only log what a signed-in person did; seeders and console scripts stay quiet.
+        static::created(function (Project $project) {
+            if (auth()->check()) {
+                app(ActivityLogService::class)->log($project, 'created', "Project created: {$project->name}");
+            }
+        });
+
+        static::updated(function (Project $project) {
+            $changed = array_intersect(array_keys($project->getChanges()), self::LOGGED_FIELDS);
+            if (! auth()->check() || ! $changed) {
+                return;
+            }
+            if ($project->wasChanged('status')) {
+                app(ActivityLogService::class)->log($project, 'status_changed',
+                    "Project status changed from {$project->getOriginal('status')} to {$project->status}: {$project->name}");
+            } else {
+                app(ActivityLogService::class)->log($project, 'updated', "Project updated: {$project->name}", ['fields' => array_values($changed)]);
+            }
+        });
+
+        static::deleted(function (Project $project) {
+            if (auth()->check()) {
+                app(ActivityLogService::class)->log($project, 'deleted', "Project deleted: {$project->name}");
+            }
+        });
+    }
+
     protected $fillable = [
         'template_id',
         'name',
         'description',
+        'objectives',
+        'budget',
         'status',
         'start_date',
         'end_date',
@@ -32,6 +68,7 @@ class Project extends Model
         'actual_completion_date' => 'datetime',
         'progress_percentage' => 'decimal:2',
         'progress_updated_at' => 'datetime',
+        'budget' => 'decimal:2',
     ];
 
     // ============================================================
@@ -66,6 +103,35 @@ class Project extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_members');
+    }
+
+    public function tasks(): HasManyThrough
+    {
+        return $this->hasManyThrough(Task::class, Phase::class);
+    }
+
+    /**
+     * Budget against the task costs: planned is the sum of task estimates,
+     * spent the sum of recorded actual costs.
+     */
+    public function getBudgetSummaryAttribute(): array
+    {
+        $planned = (float) $this->tasks()->sum('estimated_cost');
+        $spent = (float) $this->tasks()->sum('actual_cost');
+        $budget = $this->budget !== null ? (float) $this->budget : null;
+
+        return [
+            'budget' => $budget,
+            'planned' => $planned,
+            'spent' => $spent,
+            'remaining' => $budget !== null ? $budget - $spent : null,
+            'used_percent' => $budget ? round($spent / $budget * 100, 1) : null,
+        ];
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(ProjectFile::class)->latest();
     }
 
     public function progressHistory(): HasMany

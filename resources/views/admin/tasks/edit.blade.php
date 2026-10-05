@@ -1,308 +1,184 @@
-@extends('adminlte::page')
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+@extends('layouts.console')
 
 @section('title', 'Edit Task')
 
 @section('content_header')
-    <h1>
-        <i class="fas fa-edit text-warning"></i>
-        Edit Task: {{ $task->title }}
-    </h1>
+    <a href="{{ route('admin.tasks.show', $task) }}" class="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline">
+        <i data-lucide="arrow-left" class="size-4"></i>
+        Back
+    </a>
+    <x-ui.page-header :title="'Edit Task: ' . $task->title" :description="($task->phase->project->name ?? '') . ' · ' . ($task->phase->name ?? '')" />
 @endsection
 
 @section('content')
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Task Details</h3>
-                    <div class="card-tools">
-                        <a href="{{ route('admin.tasks.show', $task) }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </a>
+    @php
+        $textarea = 'block w-full rounded-lg border bg-card px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-[3px]';
+        $textareaOk = 'border-input focus:border-ring focus:ring-ring/15';
+        $textareaBad = 'border-destructive focus:border-destructive focus:ring-destructive/15';
+        $label = 'text-[13px] font-normal text-muted-foreground';
+        $deadlineStatus = $task->deadline ? $task->getDeadlineStatusAttribute() : null;
+    @endphp
+
+    <div class="grid items-start gap-5 lg:grid-cols-3">
+        <form action="{{ route('admin.tasks.update', $task) }}" method="POST" class="lg:col-span-2">
+            @csrf
+            @method('PUT')
+            <x-ui.card title="Task Details">
+                <div class="space-y-5">
+                    <div>
+                        <x-ui.label for="title">Task Title <span class="text-destructive">*</span></x-ui.label>
+                        <x-ui.input type="text" name="title" id="title" placeholder="Enter task title" :value="old('title', $task->title)" :invalid="$errors->has('title')" required />
+                        @error('title')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
                     </div>
-                </div>
-                <form action="{{ route('admin.tasks.update', $task) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <div class="card-body">
-                        {{-- Title --}}
-                        <div class="form-group">
-                            <label for="title">Task Title <span class="text-danger">*</span></label>
-                            <input type="text"
-                                   name="title"
-                                   id="title"
-                                   class="form-control @error('title') is-invalid @enderror"
-                                   placeholder="Enter task title"
-                                   value="{{ old('title', $task->title) }}"
-                                   required>
-                            @error('title')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
 
-                        {{-- Description --}}
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea name="description"
-                                      id="description"
-                                      class="form-control @error('description') is-invalid @enderror"
-                                      rows="4"
-                                      placeholder="Describe the task in detail">{{ old('description', $task->description) }}</textarea>
-                            @error('description')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
+                    <div>
+                        <x-ui.label for="description">Description</x-ui.label>
+                        <textarea name="description" id="description" rows="4" placeholder="Describe the task in detail"
+                                  class="{{ $textarea }} {{ $errors->has('description') ? $textareaBad : $textareaOk }}">{{ old('description', $task->description) }}</textarea>
+                        @error('description')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                    </div>
 
-                        {{-- Status and Priority --}}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="task_status_id">Status <span class="text-danger">*</span></label>
-                                    <select name="task_status_id"
-                                            id="task_status_id"
-                                            class="form-control @error('task_status_id') is-invalid @enderror"
-                                            required>
-                                        <option value="">Select Status</option>
-                                        @foreach($statuses as $status)
-                                            <option value="{{ $status->id }}"
-                                                    {{ old('task_status_id', $task->task_status_id) == $status->id ? 'selected' : '' }}>
-                                                {{ $status->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('task_status_id')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-ui.label for="task_status_id">Status <span class="text-destructive">*</span></x-ui.label>
+                            <x-ui.select name="task_status_id" id="task_status_id" :invalid="$errors->has('task_status_id')" required>
+                                <option value="">Select Status</option>
+                                @foreach ($statuses as $status)
+                                    <option value="{{ $status->id }}" {{ old('task_status_id', $task->task_status_id) == $status->id ? 'selected' : '' }}>{{ $status->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('task_status_id')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <x-ui.label for="task_priority_id">Priority</x-ui.label>
+                            <x-ui.select name="task_priority_id" id="task_priority_id" :invalid="$errors->has('task_priority_id')">
+                                <option value="">Select Priority</option>
+                                @foreach ($priorities as $priority)
+                                    <option value="{{ $priority->id }}" {{ old('task_priority_id', $task->task_priority_id) == $priority->id ? 'selected' : '' }}>{{ $priority->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('task_priority_id')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    {{-- Read-only: worked out from priority and deadline. --}}
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <p class="m-0 mb-1.5 text-[13px] font-semibold text-foreground">Priority Score</p>
+                            <div class="flex h-10 items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 text-sm">
+                                <span class="tabular font-medium">{{ $task->calculatePriorityScore() }} / 100</span>
+                                <x-ui.badge :variant="$task->getPriorityBadgeColorAttribute()">{{ $task->getPriorityLevelAttribute() }}</x-ui.badge>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="task_priority_id">Priority</label>
-                                    <select name="task_priority_id"
-                                            id="task_priority_id"
-                                            class="form-control @error('task_priority_id') is-invalid @enderror">
-                                        <option value="">Select Priority</option>
-                                        @foreach($priorities as $priority)
-                                            <option value="{{ $priority->id }}"
-                                                    {{ old('task_priority_id', $task->task_priority_id) == $priority->id ? 'selected' : '' }}>
-                                                {{ $priority->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('task_priority_id')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
+                            <p class="m-0 mt-1 text-[13px] text-muted-foreground">Auto-calculated based on priority level and deadline urgency</p>
                         </div>
 
-                        {{-- Priority Score --}}
-                        <div class="form-group">
-                            <label>Priority Score</label>
-                            <div class="input-group">
-                                <input type="text" 
-                                       class="form-control" 
-                                       value="{{ $task->calculatePriorityScore() }} / 100" 
-                                       disabled>
-                                <div class="input-group-append">
-                                    <span class="input-group-text">
-                                        <span class="badge badge-{{ $task->getPriorityBadgeColorAttribute() }}">
-                                            {{ $task->getPriorityLevelAttribute() }}
-                                        </span>
-                                    </span>
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> 
-                                Auto-calculated based on priority level and deadline urgency
-                            </small>
-                        </div>
-
-                        {{-- Deadline Status --}}
-                        @if($task->deadline)
-                            <div class="form-group">
-                                <label>Deadline Status</label>
-                                <div class="input-group">
-                                    <input type="text" 
-                                           class="form-control" 
-                                           value="{{ $task->getDeadlineBadgeAttribute() }}" 
-                                           disabled>
-                                    <div class="input-group-append">
-                                        <span class="input-group-text">
-                                            <span class="badge badge-{{ $task->getDeadlineColorAttribute() }}">
-                                                @if($task->isOverdue())
-                                                    <i class="fas fa-exclamation-triangle"></i> Overdue
-                                                @elseif($task->getDeadlineStatusAttribute() == 'urgent')
-                                                    <i class="fas fa-clock"></i> Urgent
-                                                @else
-                                                    <i class="fas fa-calendar-check"></i> On Track
-                                                @endif
-                                            </span>
-                                        </span>
-                                    </div>
+                        @if ($task->deadline)
+                            <div>
+                                <p class="m-0 mb-1.5 text-[13px] font-semibold text-foreground">Deadline Status</p>
+                                <div class="flex h-10 items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 text-sm">
+                                    <span class="font-medium">{{ $task->getDeadlineBadgeAttribute() }}</span>
+                                    <x-ui.badge :variant="$task->getDeadlineColorAttribute()">
+                                        @if ($task->isOverdue())
+                                            <i data-lucide="triangle-alert" class="size-3"></i> Overdue
+                                        @elseif ($deadlineStatus == 'urgent')
+                                            <i data-lucide="clock" class="size-3"></i> Urgent
+                                        @else
+                                            <i data-lucide="calendar-check" class="size-3"></i> On Track
+                                        @endif
+                                    </x-ui.badge>
                                 </div>
                             </div>
                         @endif
+                    </div>
 
-                        {{-- Assignment --}}
-                        @can('assign-task')
-                            <div class="form-group">
-                                <label for="assigned_to">Assign To</label>
-                                <select name="assigned_to"
-                                        id="assigned_to"
-                                        class="form-control @error('assigned_to') is-invalid @enderror">
-                                    <option value="">Unassigned</option>
-                                    @foreach($users as $user)
-                                        <option value="{{ $user->id }}"
-                                                {{ old('assigned_to', $task->assigned_to) == $user->id ? 'selected' : '' }}>
-                                            {{ $user->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('assigned_to')
-                                    <span class="invalid-feedback">{{ $message }}</span>
-                                @enderror
-                            </div>
-                        @endcan
-
-                        {{-- Progress --}}
-                        <div class="form-group">
-                            <label for="progress_percentage">Progress (%)</label>
-                            <input type="number"
-                                   name="progress_percentage"
-                                   id="progress_percentage"
-                                   class="form-control @error('progress_percentage') is-invalid @enderror"
-                                   min="0"
-                                   max="100"
-                                   value="{{ old('progress_percentage', $task->progress_percentage) }}">
-                            @error('progress_percentage')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                            <small class="text-muted">0-100% complete</small>
+                    @can('assign-task')
+                        <div>
+                            <x-ui.label for="assigned_to">Assign To</x-ui.label>
+                            <x-ui.select name="assigned_to" id="assigned_to" :invalid="$errors->has('assigned_to')">
+                                <option value="">Unassigned</option>
+                                @foreach ($users as $user)
+                                    <option value="{{ $user->id }}" {{ old('assigned_to', $task->assigned_to) == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('assigned_to')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
                         </div>
+                    @endcan
 
-                        {{-- Dates and Hours --}}
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="start_date">Start Date</label>
-                                    <input type="date"
-                                           name="start_date"
-                                           id="start_date"
-                                           class="form-control @error('start_date') is-invalid @enderror"
-                                           value="{{ old('start_date', $task->start_date ? $task->start_date->format('Y-m-d') : '') }}">
-                                    @error('start_date')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="deadline">Deadline</label>
-                                    <input type="date"
-                                           name="deadline"
-                                           id="deadline"
-                                           class="form-control @error('deadline') is-invalid @enderror"
-                                           value="{{ old('deadline', $task->deadline ? $task->deadline->format('Y-m-d') : '') }}">
-                                    @error('deadline')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="estimated_hours">Estimated Hours</label>
-                                    <input type="number"
-                                           name="estimated_hours"
-                                           id="estimated_hours"
-                                           class="form-control @error('estimated_hours') is-invalid @enderror"
-                                           placeholder="0.00"
-                                           step="0.5"
-                                           min="0"
-                                           value="{{ old('estimated_hours', $task->estimated_hours) }}">
-                                    @error('estimated_hours')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
+                    <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                            <x-ui.label for="progress_percentage">Progress (%)</x-ui.label>
+                            <x-ui.input type="number" name="progress_percentage" id="progress_percentage" min="0" max="100" :value="old('progress_percentage', $task->progress_percentage)" :invalid="$errors->has('progress_percentage')" />
+                            @error('progress_percentage')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                            <p class="m-0 mt-1 text-[13px] text-muted-foreground">0 to 100% complete</p>
+                        </div>
+                        <div>
+                            <x-ui.label for="start_date">Start Date</x-ui.label>
+                            <x-ui.input type="date" name="start_date" id="start_date" :value="old('start_date', $task->start_date ? $task->start_date->format('Y-m-d') : '')" :invalid="$errors->has('start_date')" />
+                            @error('start_date')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <x-ui.label for="deadline">Deadline</x-ui.label>
+                            <x-ui.input type="date" name="deadline" id="deadline" :value="old('deadline', $task->deadline ? $task->deadline->format('Y-m-d') : '')" :invalid="$errors->has('deadline')" />
+                            @error('deadline')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <x-ui.label for="estimated_hours">Estimated Hours</x-ui.label>
+                            <x-ui.input type="number" name="estimated_hours" id="estimated_hours" placeholder="0.00" step="0.5" min="0" :value="old('estimated_hours', $task->estimated_hours)" :invalid="$errors->has('estimated_hours')" />
+                            @error('estimated_hours')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-save"></i> Update Task
-                        </button>
-                        <a href="{{ route('admin.tasks.show', $task) }}" class="btn btn-secondary">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
 
-        {{-- Sidebar --}}
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Task Info</h3>
+                    @include('admin.tasks.partials.cost-fields')
                 </div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-6">Created</dt>
-                        <dd class="col-sm-6">{{ $task->created_at->diffForHumans() }}</dd>
 
-                        <dt class="col-sm-6">Created By</dt>
-                        <dd class="col-sm-6">{{ $task->creator->name ?? 'Unknown' }}</dd>
+                <x-slot:footer>
+                    <div class="flex w-full justify-end gap-2">
+                        @canvisit(route('admin.tasks.show', $task))
+                            <x-ui.button variant="outline" :href="route('admin.tasks.show', $task)">Cancel</x-ui.button>
+                        @endcanvisit
+                        <x-ui.button type="submit">
+                            <i data-lucide="save" class="size-4"></i>
+                            Update Task
+                        </x-ui.button>
+                    </div>
+                </x-slot:footer>
+            </x-ui.card>
+        </form>
 
-                        <dt class="col-sm-6">Last Updated</dt>
-                        <dd class="col-sm-6">{{ $task->updated_at->diffForHumans() }}</dd>
+        <div class="space-y-5">
+            <x-ui.card title="Task Info">
+                <dl class="m-0 divide-y divide-border">
+                    <div class="flex items-center justify-between py-2.5 first:pt-0">
+                        <dt class="{{ $label }}">Created</dt>
+                        <dd class="m-0">{{ $task->created_at->diffForHumans() }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 py-2.5">
+                        <dt class="{{ $label }}">Created By</dt>
+                        <dd class="m-0 text-right font-medium">{{ $task->creator->name ?? 'Unknown' }}</dd>
+                    </div>
+                    <div @class(['flex items-center justify-between py-2.5', 'last:pb-0' => ! $task->completed_at])>
+                        <dt class="{{ $label }}">Last Updated</dt>
+                        <dd class="m-0">{{ $task->updated_at->diffForHumans() }}</dd>
+                    </div>
+                    @if ($task->completed_at)
+                        <div class="flex items-center justify-between py-2.5 last:pb-0">
+                            <dt class="{{ $label }}">Completed</dt>
+                            <dd class="m-0">{{ $task->completed_at->diffForHumans() }}</dd>
+                        </div>
+                    @endif
+                </dl>
+            </x-ui.card>
 
-                        @if($task->completed_at)
-                            <dt class="col-sm-6">Completed</dt>
-                            <dd class="col-sm-6">{{ $task->completed_at->diffForHumans() }}</dd>
-                        @endif
-                    </dl>
-                </div>
-            </div>
-
-            {{-- Priority Legend --}}
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Priority Legend</h3>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <span><span class="badge badge-danger">Critical</span></span>
-                        <span>Score: 60-100</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span><span class="badge badge-warning">High</span></span>
-                        <span>Score: 45-59</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span><span class="badge badge-info">Medium</span></span>
-                        <span>Score: 25-44</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span><span class="badge badge-success">Low</span></span>
-                        <span>Score: 0-24</span>
-                    </div>
-                    <hr>
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        Score = Priority Weight + Deadline Bonus
-                    </small>
-                </div>
-            </div>
+            <x-ui.card title="Priority Legend" description="Score = Priority Weight + Deadline Bonus">
+                <ul class="m-0 list-none space-y-2.5 p-0 text-sm">
+                    @foreach ([['Critical', 'destructive', '60-100'], ['High', 'warning', '45-59'], ['Medium', 'primary', '25-44'], ['Low', 'success', '0-24']] as [$name, $variant, $range])
+                        <li class="flex items-center justify-between">
+                            <x-ui.badge :variant="$variant">{{ $name }}</x-ui.badge>
+                            <span class="tabular text-muted-foreground">Score: {{ $range }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-ui.card>
         </div>
     </div>
 @endsection
-
-@push('css')
-<style>
-    .badge {
-        font-size: 0.8rem;
-        padding: 4px 8px;
-    }
-</style>
-@endpush

@@ -13,7 +13,7 @@ class ProjectTemplateSeederTest extends TestCase
     {
         $this->seed();
 
-        $this->assertSame(5, \DB::table('project_templates')->count());
+        $this->assertSame(6, \DB::table('project_templates')->count());
 
         $this->assertDatabaseHas('project_templates', [
             'name' => 'Full-Stack Web Application',

@@ -31,7 +31,6 @@ class DatabaseSeeder extends Seeder
             TeamSeeder::class,
 
             // 7. 🔥 ASSIGN PERMISSIONS TO ALL USERS
-            UserPermissionsSeeder::class,
         ]);
     }
 }

@@ -1,32 +1,48 @@
-@extends('layouts.master')
+@extends('layouts.console')
 
-@section('subtitle', 'Team Leader Details')
-@section('content_header_title', $teamLeader->name)
-@section('content_header_subtitle', 'Team leader')
+@section('title', 'Team Leader Details')
 
-@section('content_body')
-    @include('admin.organization._alerts')
+@section('content_header')
+    @canvisit(route('admin.organization.team-leaders.index'))
+        <a href="{{ route('admin.organization.team-leaders.index') }}" class="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline">
+            <i data-lucide="arrow-left" class="size-4"></i>
+            Back
+        </a>
+    @endcanvisit
+    <x-ui.page-header :title="$teamLeader->name" description="Team leader">
+        @canvisit(route('admin.organization.team-leaders.edit', $teamLeader))
+            <x-ui.button variant="outline" :href="route('admin.organization.team-leaders.edit', $teamLeader)">
+                <i data-lucide="pencil" class="size-4"></i>
+                Edit Team Leader
+            </x-ui.button>
+        @endcanvisit
+    </x-ui.page-header>
+@endsection
 
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title mb-0">Team Leader Profile</h3>
-        </div>
-        <div class="card-body">
-            <p><strong>Email:</strong> {{ $teamLeader->email }}</p>
-            <p><strong>Teams Led:</strong></p>
-            @forelse ($teamLeader->ledTeams as $team)
-                <a href="{{ route('admin.organization.teams.show', $team) }}" class="badge badge-info mr-1">
-                    {{ $team->name }} ({{ $team->members->count() }} members)
-                </a>
-            @empty
-                <span class="text-muted">No teams assigned.</span>
-            @endforelse
-        </div>
-        <div class="card-footer">
-            @canany(['assign-team-leader', 'manage-team-members'])
-                <a href="{{ route('admin.organization.team-leaders.edit', $teamLeader) }}" class="btn btn-primary btn-sm">Edit Team Leader</a>
-            @endcanany
-            <a href="{{ route('admin.organization.team-leaders.index') }}" class="btn btn-secondary btn-sm">Back</a>
-        </div>
-    </div>
-@stop
+@section('content')
+
+    <x-ui.card title="Team Leader Profile">
+        <dl class="m-0 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <div>
+                <dt class="text-[13px] font-normal text-muted-foreground">Email</dt>
+                <dd class="m-0 mt-1 font-medium">{{ $teamLeader->email }}</dd>
+            </div>
+            <div>
+                <dt class="text-[13px] font-normal text-muted-foreground">Teams Led</dt>
+                <dd class="m-0 mt-1.5 flex flex-wrap gap-1.5">
+                    @forelse ($teamLeader->ledTeams as $team)
+                        @if (auth()->user()->isDirector() || in_array($team->id, auth()->user()->getTeamIds()))
+                            <a href="{{ route('admin.organization.teams.show', $team) }}" class="no-underline hover:no-underline">
+                                <x-ui.badge variant="primary" class="hover:bg-primary/20">{{ $team->name }} ({{ $team->members->count() }} members)</x-ui.badge>
+                            </a>
+                        @else
+                            <x-ui.badge variant="primary">{{ $team->name }} ({{ $team->members->count() }} members)</x-ui.badge>
+                        @endif
+                    @empty
+                        <span class="text-sm text-muted-foreground">No teams assigned.</span>
+                    @endforelse
+                </dd>
+            </div>
+        </dl>
+    </x-ui.card>
+@endsection

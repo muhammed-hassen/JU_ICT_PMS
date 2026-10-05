@@ -121,6 +121,7 @@ return [
         // ============================================================
         'user' => [
             ['name' => 'view-all-users', 'description' => 'Can see all users in the system'],
+            ['name' => 'assign-role', 'description' => 'Can assign roles to users'],
             ['name' => 'view-team-users', 'description' => 'Can see users only from their team'],
             ['name' => 'view-user-profile', 'description' => 'Can view user profile information'],
             ['name' => 'edit-own-profile', 'description' => 'Can edit their own profile'],
@@ -225,114 +226,125 @@ return [
     // ============================================================
     // ROLES
     // ============================================================
+    // Need-to-know: each role gets only what its job requires. Permissions are
+    // held by roles only, never granted to a user directly, so changing a
+    // person's role changes everything they can do.
     'roles' => [
-        // ============================================================
-        // ICT DIRECTOR - ALL PERMISSIONS
-        // ============================================================
+        // Runs the Directorate: every project, team and report. Does not
+        // manage login accounts or the permission system (the System
+        // Administrator's job) and does not edit templates.
         'ICT Director' => [
-            'description' => 'Full system access - can manage everything',
-            'permissions' => '*',
-        ],
-
-        // ============================================================
-        // SYSTEM ADMINISTRATOR - ALL PERMISSIONS
-        // ============================================================
-        'System Administrator' => [
-            'description' => 'Full system access - can manage everything',
-            'permissions' => '*',
-        ],
-
-        // ============================================================
-        // TEAM LEADER
-        // ============================================================
-        'Team Leader' => [
-            'description' => 'Manages team and assigns tasks',
+            'description' => 'Oversees all projects, teams and reports',
             'permissions' => [
-                // Projects
-                'view-team-projects',
-                'view-project-details',
-                'view-projects',
-                'view-project-members',
-                'manage-project-members',
-                'update-project-progress',
-                'change-project-status',
-                'create-project',
-                'edit-own-project',
+                'access-admin',
 
-                // Phases
-                'view-team-phases',
-                'view-phases',
-                'create-phase',
-                'edit-phase',
-                'reorder-phases',
-                'update-phase-progress',
-                'complete-phase',
+                // Projects, phases, tasks: everything
+                'view-all-projects', 'view-team-projects', 'view-own-projects', 'view-project-details', 'view-projects',
+                'create-project', 'edit-project', 'edit-own-project', 'delete-project', 'view-project-members',
+                'manage-project-members', 'update-project-progress', 'change-project-status',
+                'view-all-phases', 'view-team-phases', 'view-own-phases', 'view-phases', 'create-phase', 'edit-phase',
+                'delete-phase', 'reorder-phases', 'update-phase-progress', 'complete-phase',
+                'view-all-tasks', 'view-team-tasks', 'view-own-tasks', 'view-tasks', 'create-task', 'assign-task',
+                'edit-task', 'edit-own-task', 'delete-task', 'complete-task', 'review-task', 'update-task-progress',
+                'reorder-tasks',
 
-                // Tasks
-                'view-team-tasks',
-                'view-tasks',
-                'create-task',
-                'assign-task',
-                'edit-task',
-                'complete-task',
-                'review-task',
-                'update-task-progress',
+                // Organization structure (SRS 5.2: the Director defines it)
+                'view-organization-structure', 'view-teams', 'view-team-members', 'view-directors', 'view-team-leaders',
+                'view-members', 'manage-teams', 'manage-directors', 'manage-team-leaders', 'manage-members',
 
-                // Organization
-                'view-organization-structure',
-                'view-teams',
-                'view-team-members',
-                'view-members',
+                // Templates: use them, not edit them
+                'view-templates', 'apply-template',
 
-                // Templates
-                'view-templates',
-                'apply-template',
+                // Oversight
+                'view-reports', 'view-all-reports', 'view-team-reports', 'export-reports',
+                'view-budget', 'edit-budget', 'approve-budget', 'view-cost',
+                'view-audit-logs', 'view-all-activity-logs', 'view-user-activity-logs',
+                'view-dashboard', 'view-director-dashboard',
 
-                // Dashboard
-                'view-dashboard',
-
-                // Reports
-                'view-reports',
-
-                // Users
-                'view-user-profile',
-                'edit-own-profile',
+                // Communication, files, notifications
+                'view-own-conversations', 'create-conversation', 'send-message', 'edit-own-message', 'delete-own-message',
+                'view-own-notifications', 'mark-notifications-read',
+                'view-project-files', 'upload-project-files', 'download-files', 'delete-own-files', 'delete-any-files',
             ],
         ],
 
-        // ============================================================
-        // TEAM MEMBER
-        // ============================================================
-        'Team Member' => [
-            'description' => 'Executes assigned tasks',
+        // Keeps the system running: login accounts, roles and permissions,
+        // templates, reference data and the audit log. Does not see project
+        // work, teams or reports.
+        'System Administrator' => [
+            'description' => 'Manages accounts, roles, permissions, templates and the audit log',
             'permissions' => [
-                // Projects
-                'view-own-projects',
-                'view-project-details',
-                'view-projects',
+                'access-admin', 'configure-system',
 
-                // Phases
-                'view-own-phases',
-                'view-phases',
+                // Accounts
+                'view-all-users', 'assign-role', 'edit-user', 'delete-user',
 
-                // Tasks
-                'view-own-tasks',
-                'view-tasks',
-                'edit-own-task',
-                'complete-task',
-                'update-task-progress',
+                // Templates (SRS 5.7: the admin creates them)
+                'view-templates', 'create-template', 'edit-template', 'delete-template',
 
-                // Organization
-                'view-organization-structure',
-                'view-teams',
-                'view-team-members',
+                // Reference data
+                'view-reference-data', 'manage-reference-data', 'manage-project-types', 'manage-project-statuses',
+                'manage-lifecycle-stages', 'manage-phase-statuses', 'manage-task-statuses', 'manage-task-priorities',
 
-                // Dashboard
-                'view-dashboard',
+                // Audit
+                'view-audit-logs', 'view-all-activity-logs', 'view-user-activity-logs', 'export-audit-logs',
+                'view-dashboard', 'view-system-dashboard',
 
-                // Users
-                'view-user-profile',
-                'edit-own-profile',
+                // Communication and notifications
+                'view-own-conversations', 'create-conversation', 'send-message', 'edit-own-message', 'delete-own-message',
+                'view-own-notifications', 'mark-notifications-read',
+            ],
+        ],
+
+        // Runs their own team's work: its projects, phases and tasks, and
+        // reports on them. Sees only their own teams, not the staff
+        // directories or other teams.
+        'Team Leader' => [
+            'description' => 'Plans and assigns the work of their own team',
+            'permissions' => [
+                'access-admin',
+
+                // Projects of their teams; edits only the ones they created
+                'view-team-projects', 'view-projects', 'view-project-details', 'view-project-members',
+                'manage-project-members', 'create-project', 'edit-own-project', 'update-project-progress',
+                'change-project-status',
+
+                // Phases and tasks of their teams
+                'view-team-phases', 'view-phases', 'create-phase', 'edit-phase', 'reorder-phases',
+                'update-phase-progress', 'complete-phase',
+                'view-team-tasks', 'view-tasks', 'create-task', 'assign-task', 'edit-task', 'complete-task',
+                'review-task', 'update-task-progress',
+
+                // Their own team only
+                'view-teams', 'view-team-members',
+
+                // Create projects from a template
+                'apply-template',
+
+                // Reports on their teams
+                'view-reports', 'view-team-reports', 'export-reports', 'view-budget', 'view-cost',
+                'view-dashboard', 'view-team-leader-dashboard',
+
+                // Communication, files, notifications
+                'view-own-conversations', 'create-conversation', 'send-message', 'edit-own-message', 'delete-own-message',
+                'view-own-notifications', 'mark-notifications-read',
+                'view-project-files', 'upload-project-files', 'download-files', 'delete-own-files',
+            ],
+        ],
+
+        // Does the work assigned to them: sees their own tasks and the
+        // projects those tasks belong to, and nothing else.
+        'Team Member' => [
+            'description' => 'Works on the tasks assigned to them',
+            'permissions' => [
+                'view-own-projects', 'view-projects', 'view-project-details',
+                'view-own-tasks', 'view-tasks', 'edit-own-task', 'complete-task', 'update-task-progress',
+                'view-dashboard', 'view-member-dashboard',
+
+                // Communication, files, notifications
+                'view-own-conversations', 'create-conversation', 'send-message', 'edit-own-message', 'delete-own-message',
+                'view-own-notifications', 'mark-notifications-read',
+                'view-project-files', 'upload-project-files', 'download-files', 'delete-own-files',
             ],
         ],
     ],

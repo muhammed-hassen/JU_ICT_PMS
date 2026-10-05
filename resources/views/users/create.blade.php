@@ -1,133 +1,86 @@
-@extends('adminlte::page')
+@extends('layouts.console')
 
 @section('title', 'Create User')
 
 @section('content_header')
-    <h1>Create New User</h1>
+    <x-ui.page-header title="Create New User" description="Add an account and choose its role." />
 @stop
-
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
 
 @section('content')
+    <form action="{{ route('users.store') }}" method="POST">
+        @csrf
 
-<div class="row">
-    <div class="col-md-6 offset-md-3">
-
-        <div class="card card-primary">
-            <div class="card-header">
-                <h3 class="card-title">User Information</h3>
+        <x-ui.card class="max-w-3xl" title="User Information">
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <x-ui.label for="name">Name <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.input type="text" name="name" id="name" :value="old('name')" :invalid="$errors->has('name')" />
+                    @error('name')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <x-ui.label for="email">Email <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.input type="email" name="email" id="email" :value="old('email')" :invalid="$errors->has('email')" />
+                    @error('email')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <x-ui.label for="password">Password <span class="text-destructive">*</span></x-ui.label>
+                    <div class="relative">
+                        <x-ui.input type="password" name="password" id="password" class="pr-11" autocomplete="new-password" :invalid="$errors->has('password')" required />
+                        <button type="button" id="toggle-password" aria-label="Show password" aria-controls="password" aria-pressed="false"
+                                class="absolute right-1 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground">
+                            <span data-eye="show"><i data-lucide="eye" class="size-4"></i></span>
+                            <span data-eye="hide" hidden><i data-lucide="eye-off" class="size-4"></i></span>
+                        </button>
+                    </div>
+                    @error('password')
+                        <p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>
+                    @else
+                        <p class="m-0 mt-1 text-[13px] text-muted-foreground">At least 8 characters, with letters and numbers.</p>
+                    @enderror
+                </div>
+                <div>
+                    <x-ui.label for="role_id">Role <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.select name="role_id" id="role_id" :invalid="$errors->has('role_id')">
+                        @foreach ($roles as $role)
+                            <option value="{{ $role->id }}"
+                                {{ old('role_id', isset($user) ? $user->roles->first()?->id : null) == $role->id ? 'selected' : '' }}>
+                                {{ $role->name }}
+                            </option>
+                        @endforeach
+                    </x-ui.select>
+                    @error('role_id')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
             </div>
-        @if ($errors->any())
-    <div class="alert alert-danger" id="errorAlert">
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-            <form action="{{ route('users.store') }}" method="POST">
-                @csrf
 
-                <div class="card-body">
-
-                    {{-- Name --}}
-                    <div class="form-group">
-                        <label>Name</label>
-                       <input type="text" name="name" value="{{ old('name') }}" class="form-control">
-
-                    </div>
-
-                    {{-- Email --}}
-                    <div class="form-group">
-                        <label>Email</label>
-                       <input type="email" name="email" value="{{ old('email') }}" class="form-control">
-
-                    </div>
-
-                    {{-- Password --}}
-                    <div class="form-group">
-    <label>Password</label>
-
-    <div class="input-group">
-        <input type="password" name="password" id="password"
-               class="form-control" required>
-
-        <div class="input-group-append">
-            <span class="input-group-text" onclick="togglePassword()" style="cursor:pointer;">
-                <i class="fas fa-eye" id="eyeIcon"></i>
-            </span>
-        </div>
-    </div>
-
-    @error('password')
-        <small class="text-danger">{{ $message }}</small>
-    @enderror
-</div>
-
-                    {{-- Role --}}
-                    <div class="form-group">
-    <label>Role</label>
-
-    <select name="role_id" class="form-control">
-        @foreach($roles as $role)
-            <option value="{{ $role->id }}"
-                {{ isset($user) && $user->role_id == $role->id ? 'selected' : '' }}>
-                {{ $role->name }}
-            </option>
-        @endforeach
-    </select>
-</div>
-
-                </div>
-
-                <div class="card-footer text-right">
-                    <a href="{{ route('users.index') }}" class="btn btn-secondary">
-                        Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary">
+            <x-slot:footer>
+                <div class="flex w-full justify-end gap-2">
+                    @canvisit(route('users.index'))
+                        <x-ui.button variant="outline" :href="route('users.index')">Cancel</x-ui.button>
+                    @endcanvisit
+                    <x-ui.button type="submit">
+                        <i data-lucide="save" class="size-4"></i>
                         Save User
-                    </button>
+                    </x-ui.button>
                 </div>
-
-            </form>
-
-        </div>
-
-    </div>
-</div>
-
+            </x-slot:footer>
+        </x-ui.card>
+    </form>
 @stop
+
 @push('js')
 <script>
-function togglePassword() {
-    const password = document.getElementById('password');
-    const icon = document.getElementById('eyeIcon');
-
-    if (password.type === "password") {
-        password.type = "text";
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        password.type = "password";
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
-}
-</script>
-@endpush
-@push('js')
-<script>
-    setTimeout(function () {
-        let alert = document.getElementById('errorAlert');
-        if (alert) {
-            alert.style.transition = "opacity 0.5s ease";
-            alert.style.opacity = "0";
-
-            setTimeout(() => {
-                alert.remove();
-            }, 500);
-        }
-    }, 4000); // stays 4 seconds
+    (function () {
+        var button = document.getElementById('toggle-password');
+        var input = document.getElementById('password');
+        if (!button || !input) return;
+        button.addEventListener('click', function () {
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.setAttribute('aria-pressed', show ? 'true' : 'false');
+            button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            button.querySelector('[data-eye="show"]').hidden = show;
+            button.querySelector('[data-eye="hide"]').hidden = !show;
+        });
+    })();
 </script>
 @endpush

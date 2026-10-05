@@ -36,247 +36,97 @@
         'id' => $priority->id,
         'name' => $priority->name,
     ])->values()->all();
+
+    $textareaClasses = 'block w-full rounded-lg border bg-card px-3 py-2 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 focus:outline-none focus:ring-[3px]';
 @endphp
 
-<div class="card-body p-0">
-    <div class="px-4 py-4 border-bottom bg-light">
-        <div class="form-group mb-0">
-            <label for="name" class="form-label fw-600">Template Name</label>
-            <input
-                type="text"
-                name="name"
+<x-ui.card>
+    <div class="grid gap-5">
+        <div>
+            <x-ui.label for="name">Template Name</x-ui.label>
+            <x-ui.input
                 id="name"
-                value="{{ old('name', $template->name) }}"
-                class="form-control form-control-lg @error('name') is-invalid @enderror"
+                name="name"
+                :value="old('name', $template->name)"
                 placeholder="Enter template name"
+                :invalid="$errors->has('name')"
                 required
-            >
-            @error('name')
-                <span class="invalid-feedback d-block">{{ $message }}</span>
-            @enderror
+            />
+            @error('name')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
         </div>
-    </div>
 
-    <div class="px-4 py-4 border-bottom">
-        <div class="form-group mb-0">
-            <label for="description" class="form-label fw-600">Description</label>
+        <div>
+            <x-ui.label for="description">Description</x-ui.label>
             <textarea
                 name="description"
                 id="description"
                 rows="2"
-                class="form-control @error('description') is-invalid @enderror"
-                placeholder="Describe this template..."
+                placeholder="Describe this template"
+                @class([$textareaClasses, 'border-input focus:border-ring focus:ring-ring/15' => ! $errors->has('description'), 'border-destructive focus:border-destructive focus:ring-destructive/15' => $errors->has('description')])
             >{{ old('description', $template->description) }}</textarea>
-            @error('description')
-                <span class="invalid-feedback d-block">{{ $message }}</span>
-            @enderror
+            @error('description')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
         </div>
-    </div>
 
-    <div class="px-4 py-4 border-bottom">
-        <div class="custom-control custom-switch template-switch">
+        <label for="is_active" class="m-0 flex cursor-pointer items-center gap-2.5 text-sm font-medium text-foreground">
             <input
                 type="checkbox"
-                class="custom-control-input"
+                class="size-4 accent-[var(--primary)]"
                 id="is_active"
                 name="is_active"
                 value="1"
                 @checked(old('is_active', $template->is_active))
             >
-            <label class="custom-control-label fw-500" for="is_active">
-                This template is active and available for use
-            </label>
+            This template is active and available for use
+        </label>
+    </div>
+</x-ui.card>
+
+@if ($errors->has('phases') || $errors->has('phases.*.name') || $errors->has('phases.*.tasks') || $errors->has('phases.*.tasks.*.title'))
+    <div class="mt-5 flex items-start gap-3 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
+        <i data-lucide="circle-alert" class="mt-0.5 size-4 shrink-0"></i>
+        <div>
+            <p class="m-0 font-semibold">Template structure has validation errors.</p>
+            <p class="m-0">Please review the active phase and task details before saving.</p>
         </div>
     </div>
+@endif
 
-    @if ($errors->has('phases') || $errors->has('phases.*.name') || $errors->has('phases.*.tasks') || $errors->has('phases.*.tasks.*.title'))
-        <div class="alert alert-danger mx-4 my-3 mb-0 border-0 template-structure-alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                <div>
-                    <strong>Template structure has validation errors.</strong>
-                    <div class="small">Please review the active phase and task details before saving.</div>
-                </div>
-            </div>
+<div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+    <div class="self-start rounded-xl border border-border bg-card shadow-xs">
+        <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h3 class="m-0 font-sans text-[15px] font-semibold text-foreground">Phases</h3>
+            <x-ui.button variant="outline" size="sm" id="add-phase">
+                <i data-lucide="plus" class="size-4"></i>
+                Add Phase
+            </x-ui.button>
         </div>
-    @endif
-</div>
-
-<div class="card-body px-0 py-4">
-    <div class="row mx-0">
-        <div class="col-lg-4 mb-3 mb-lg-0">
-            <div class="card card-outline card-primary border-0 shadow-sm h-100 mb-0">
-                <div class="card-header bg-primary-gradient d-flex justify-content-between align-items-center border-0">
-                    <h5 class="card-title mb-0 text-white fw-600">Phases</h5>
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-light text-primary fw-600"
-                        id="add-phase"
-                        title="Add new phase"
-                    >
-                        <i class="fas fa-plus mr-1"></i>
-                        Add Phase
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div id="phase-nav" class="list-group list-group-flush rounded-0"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-8">
-            <div class="card card-outline card-secondary border-0 shadow-sm mb-0">
-                <div class="card-header bg-secondary-gradient d-flex justify-content-between align-items-center border-0">
-                    <h5 class="card-title mb-0 text-white fw-600">Phase Details</h5>
-                    <div class="btn-group btn-group-sm ml-auto" role="group">
-                        <button type="button" class="btn btn-outline-light btn-sm fw-500" id="move-phase-up" title="Move phase up">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-light btn-sm fw-500" id="move-phase-down" title="Move phase down">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger btn-sm fw-500" id="remove-phase" title="Remove phase">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body" id="phase-editor"></div>
-            </div>
-        </div>
+        <div id="phase-nav" class="flex flex-col"></div>
     </div>
 
-    <div id="structure-inputs"></div>
+    <div class="rounded-xl border border-border bg-card shadow-xs">
+        <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h3 class="m-0 font-sans text-[15px] font-semibold text-foreground">Phase Details</h3>
+            <div class="flex items-center gap-0.5">
+                <x-ui.icon-button icon="arrow-up" label="Move phase up" id="move-phase-up" class="disabled:pointer-events-none disabled:opacity-40" />
+                <x-ui.icon-button icon="arrow-down" label="Move phase down" id="move-phase-down" class="disabled:pointer-events-none disabled:opacity-40" />
+                <x-ui.icon-button icon="trash-2" label="Remove phase" tone="destructive" id="remove-phase" class="disabled:pointer-events-none disabled:opacity-40" />
+            </div>
+        </div>
+        <div class="p-5" id="phase-editor"></div>
+    </div>
 </div>
 
-<div class="card-footer bg-light border-top d-flex justify-content-end template-footer-actions">
-    <a href="{{ route('admin.templates.index') }}" class="btn btn-light border fw-600">Cancel</a>
-    <button type="submit" class="btn btn-primary template-blue-variant fw-600 px-4">{{ $submitLabel }}</button>
+<div id="structure-inputs"></div>
+
+<div class="mt-6 flex justify-end gap-2">
+    @canvisit(route('admin.templates.index'))
+        <x-ui.button variant="outline" :href="route('admin.templates.index')">Cancel</x-ui.button>
+    @endcanvisit
+    <x-ui.button type="submit">
+        <i data-lucide="check" class="size-4"></i>
+        {{ $submitLabel }}
+    </x-ui.button>
 </div>
-
-@push('css')
-<style>
-    .card-elevated {
-        border: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .bg-primary-gradient {
-        background: linear-gradient(135deg, #1f75cb 0%, #3b5bd6 100%);
-    }
-
-    .bg-secondary-gradient {
-        background: linear-gradient(135deg, #6c757d 0%, #7a8288 100%);
-    }
-
-    .form-label {
-        font-size: 0.875rem;
-        color: #2c3e50;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-control-lg {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.375rem;
-        transition: all 0.2s ease;
-    }
-
-    .form-control-lg:focus,
-    .form-control:focus {
-        border-color: #1f75cb;
-        box-shadow: 0 0 0 3px rgba(31, 117, 203, 0.1);
-    }
-
-    .fw-600 {
-        font-weight: 600;
-    }
-
-    .fw-500 {
-        font-weight: 500;
-    }
-
-    .template-blue-variant {
-        background: linear-gradient(135deg, var(--auth-button, #1f75cb) 0%, #3b5bd6 100%) !important;
-        border-color: transparent !important;
-        color: var(--auth-button-text, #ffffff) !important;
-        box-shadow: 0 10px 22px rgba(31, 117, 203, 0.2);
-        --auth-button: #1f75cb;
-        --auth-button-text: #ffffff;
-    }
-
-    .template-blue-variant:hover,
-    .template-blue-variant:focus,
-    .template-blue-variant:active {
-        background: linear-gradient(135deg, #1068bf 0%, #314fc7 100%) !important;
-        border-color: transparent !important;
-        color: #ffffff !important;
-        box-shadow: 0 14px 28px rgba(31, 117, 203, 0.24);
-    }
-
-    #phase-nav .list-group-item {
-        border: none;
-        border-bottom: 1px solid #e0e0e0;
-        padding: 1rem;
-        transition: all 0.2s ease;
-    }
-
-    #phase-nav .list-group-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    #phase-nav .list-group-item.active {
-        background-color: #e7f0f7;
-        border-left: 3px solid #1f75cb;
-        padding-left: calc(1rem - 3px);
-    }
-
-    .template-structure-alert {
-        background-color: #fff5f5;
-        border-left: 4px solid #dc3545 !important;
-        color: #721c24;
-        border-radius: 0.5rem;
-    }
-
-    .template-footer-actions {
-        gap: 0.5rem;
-    }
-
-    .template-switch .custom-control-label {
-        padding-top: 0.1rem;
-    }
-
-    .task-pagination-controls {
-        gap: 0.5rem;
-    }
-
-    .task-pagination-summary {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-
-    .btn-light {
-        border-color: #d9d9d9;
-    }
-
-    .btn-light:hover {
-        background-color: #f8f9fa;
-        border-color: #c0c0c0;
-    }
-
-    .btn-outline-light {
-        color: #fff;
-        border-color: rgba(255, 255, 255, 0.5);
-    }
-
-    .btn-outline-light:hover,
-    .btn-outline-light:focus {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: #fff;
-        color: #fff;
-    }
-</style>
-@endpush
 
 @push('js')
 <script>
@@ -290,6 +140,17 @@
         const movePhaseDownButton = document.getElementById('move-phase-down');
         const structureInputs = document.getElementById('structure-inputs');
         const priorityOptions = @json($priorityOptions);
+
+        // Same classes as the x-ui.input, x-ui.select, x-ui.label and x-ui.button components.
+        const fieldClass = 'block w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 focus:border-ring focus:outline-none focus:ring-[3px] focus:ring-ring/15';
+        const inputClass = `${fieldClass} h-10`;
+        const textareaClass = `${fieldClass} py-2`;
+        const selectClass = `ui-select ${fieldClass} h-10 appearance-none pr-9`;
+        const labelClass = 'mb-1.5 block text-[13px] font-semibold text-foreground';
+        const outlineButtonClass = 'inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-input bg-card px-3 text-[13px] font-medium text-foreground shadow-xs transition-colors duration-200 hover:bg-muted disabled:pointer-events-none disabled:opacity-50';
+        const primaryButtonClass = 'inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-lg border-0 bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-xs transition-colors duration-200 hover:bg-ju-blue-700';
+        const iconButtonClass = 'inline-flex size-8 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40';
+        const iconButtonDangerClass = 'inline-flex size-8 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors duration-200 hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40';
 
         let phases = @json($phases);
         let activePhaseIndex = phases.length ? 0 : null;
@@ -356,22 +217,31 @@
             return options.join('');
         };
 
+        const refreshIcons = () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        };
+
         const renderPhaseNav = () => {
             phaseNav.innerHTML = phases.map((phase, index) => {
-                const activeClass = index === activePhaseIndex ? 'active' : '';
+                const isActive = index === activePhaseIndex;
                 const phaseName = phase.name.trim() ? phase.name : `Untitled Phase ${index + 1}`;
                 const taskLabel = `${phase.tasks.length} task${phase.tasks.length === 1 ? '' : 's'}`;
-                const badgeClass = index === activePhaseIndex ? 'badge-light text-primary' : 'badge-secondary';
+                const rowClass = isActive
+                    ? 'border-l-primary bg-primary/5'
+                    : 'border-l-transparent bg-card hover:bg-muted';
+                const badgeClass = isActive
+                    ? 'border-primary/20 bg-primary/10 text-ju-blue-700'
+                    : 'border-border bg-muted text-muted-foreground';
 
                 return `
-                    <button type="button" class="list-group-item list-group-item-action text-left ${activeClass}" data-phase-select="${index}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="fw-600 text-dark" style="font-size: 0.95rem;">Phase ${index + 1}</div>
-                                <div class="text-muted small mt-1" style="font-size: 0.875rem;">${escapeHtml(phaseName)}</div>
-                            </div>
-                            <span class="badge ${badgeClass}" style="white-space: nowrap;">${taskLabel}</span>
-                        </div>
+                    <button type="button" class="flex w-full items-start justify-between gap-3 border-0 border-b border-l-2 border-solid border-b-border px-5 py-3 text-left transition-colors duration-200 last:border-b-0 ${rowClass}" data-phase-select="${index}" ${isActive ? 'aria-current="true"' : ''}>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold text-foreground">Phase ${index + 1}</span>
+                            <span class="mt-0.5 block truncate text-[13px] text-muted-foreground">${escapeHtml(phaseName)}</span>
+                        </span>
+                        <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-4 ${badgeClass}">${taskLabel}</span>
                     </button>
                 `;
             }).join('');
@@ -383,95 +253,109 @@
             const task = phase.tasks[activeTaskIndex];
 
             phaseEditor.innerHTML = `
-                <div class="form-group mb-4">
-                    <label for="active_phase_name" class="form-label fw-600">Phase Name</label>
-                    <input
-                        type="text"
-                        id="active_phase_name"
-                        class="form-control"
-                        placeholder="e.g., Planning, Development, Testing"
-                        value="${escapeHtml(phase.name)}"
-                        data-phase-field="name"
-                    >
-                </div>
+                <div class="grid gap-5">
+                    <div>
+                        <label for="active_phase_name" class="${labelClass}">Phase Name</label>
+                        <input
+                            type="text"
+                            id="active_phase_name"
+                            class="${inputClass}"
+                            placeholder="e.g. Planning, Development, Testing"
+                            value="${escapeHtml(phase.name)}"
+                            data-phase-field="name"
+                        >
+                    </div>
 
-                <div class="form-group mb-4">
-                    <label for="active_phase_description" class="form-label fw-600">Phase Description</label>
-                    <textarea
-                        id="active_phase_description"
-                        rows="2"
-                        class="form-control"
-                        placeholder="Describe what happens in this phase..."
-                        data-phase-field="description"
-                    >${escapeHtml(phase.description)}</textarea>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h6 class="mb-0 fw-600 text-dark">Tasks</h6>
-                    <div class="d-flex align-items-center task-pagination-controls">
-                        <span class="task-pagination-summary">Task ${activeTaskIndex + 1} of ${phase.tasks.length}</span>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Task pagination">
-                            <button type="button" class="btn btn-outline-secondary" id="previous-task" ${activeTaskIndex === 0 ? 'disabled' : ''}>Previous Task</button>
-                            <button type="button" class="btn btn-outline-secondary" id="next-task" ${activeTaskIndex === phase.tasks.length - 1 ? 'disabled' : ''}>Next Task</button>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm template-blue-variant" id="add-task">Add Task</button>
+                    <div>
+                        <label for="active_phase_description" class="${labelClass}">Phase Description</label>
+                        <textarea
+                            id="active_phase_description"
+                            rows="2"
+                            class="${textareaClass}"
+                            placeholder="Describe what happens in this phase"
+                            data-phase-field="description"
+                        >${escapeHtml(phase.description)}</textarea>
                     </div>
                 </div>
 
-                <div id="task-list">
-                    <div class="card border-0 mb-3 shadow-sm" data-task-index="${activeTaskIndex}" style="background-color: #f8f9fa;">
-                        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
-                            <h6 class="card-title mb-0 fw-600 text-dark">Task ${activeTaskIndex + 1}</h6>
-                            <div class="btn-group btn-group-sm ml-auto">
-                                <button type="button" class="btn btn-outline-secondary btn-sm move-task-up" data-task-move="up" data-task-index="${activeTaskIndex}" title="Move task up" ${activeTaskIndex === 0 ? 'disabled' : ''}>
-                                    <i class="fas fa-arrow-up"></i>
+                <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+                    <h4 class="m-0 font-sans text-[15px] font-semibold text-foreground">Tasks</h4>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="task-pagination-summary tabular text-[13px] text-muted-foreground">Task ${activeTaskIndex + 1} of ${phase.tasks.length}</span>
+                        <div class="flex items-center gap-1" role="group" aria-label="Task pagination">
+                            <button type="button" class="${outlineButtonClass}" id="previous-task" ${activeTaskIndex === 0 ? 'disabled' : ''}>
+                                <i data-lucide="chevron-left" class="size-4"></i>
+                                Previous Task
+                            </button>
+                            <button type="button" class="${outlineButtonClass}" id="next-task" ${activeTaskIndex === phase.tasks.length - 1 ? 'disabled' : ''}>
+                                Next Task
+                                <i data-lucide="chevron-right" class="size-4"></i>
+                            </button>
+                        </div>
+                        <button type="button" class="${primaryButtonClass}" id="add-task">
+                            <i data-lucide="plus" class="size-4"></i>
+                            Add Task
+                        </button>
+                    </div>
+                </div>
+
+                <div id="task-list" class="mt-4">
+                    <div class="rounded-xl border border-border bg-background" data-task-index="${activeTaskIndex}">
+                        <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                            <h5 class="m-0 font-sans text-sm font-semibold text-foreground">Task ${activeTaskIndex + 1}</h5>
+                            <div class="flex items-center gap-0.5">
+                                <button type="button" class="${iconButtonClass} move-task-up" data-task-move="up" data-task-index="${activeTaskIndex}" title="Move task up" aria-label="Move task up" ${activeTaskIndex === 0 ? 'disabled' : ''}>
+                                    <i data-lucide="arrow-up" class="size-4"></i>
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm move-task-down" data-task-move="down" data-task-index="${activeTaskIndex}" title="Move task down" ${activeTaskIndex === phase.tasks.length - 1 ? 'disabled' : ''}>
-                                    <i class="fas fa-arrow-down"></i>
+                                <button type="button" class="${iconButtonClass} move-task-down" data-task-move="down" data-task-index="${activeTaskIndex}" title="Move task down" aria-label="Move task down" ${activeTaskIndex === phase.tasks.length - 1 ? 'disabled' : ''}>
+                                    <i data-lucide="arrow-down" class="size-4"></i>
                                 </button>
-                                <button type="button" class="btn btn-outline-danger btn-sm remove-task" data-task-remove="${activeTaskIndex}" title="Remove task" ${phase.tasks.length === 1 ? 'disabled' : ''}>
-                                    <i class="fas fa-trash-alt"></i>
+                                <button type="button" class="${iconButtonDangerClass} remove-task" data-task-remove="${activeTaskIndex}" title="Remove task" aria-label="Remove task" ${phase.tasks.length === 1 ? 'disabled' : ''}>
+                                    <i data-lucide="trash-2" class="size-4"></i>
                                 </button>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-600 small">Task Title</label>
+                        <div class="grid gap-4 p-4">
+                            <div>
+                                <label for="active_task_title" class="${labelClass}">Task Title</label>
                                 <input
                                     type="text"
-                                    class="form-control"
-                                    placeholder="e.g., Design database schema"
+                                    id="active_task_title"
+                                    class="${inputClass}"
+                                    placeholder="e.g. Design database schema"
                                     value="${escapeHtml(task.title)}"
                                     data-task-field="title"
                                     data-task-index="${activeTaskIndex}"
                                 >
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-600 small">Task Description</label>
+                            <div>
+                                <label for="active_task_description" class="${labelClass}">Task Description</label>
                                 <textarea
+                                    id="active_task_description"
                                     rows="2"
-                                    class="form-control"
-                                    placeholder="Brief description of the task..."
+                                    class="${textareaClass}"
+                                    placeholder="Brief description of the task"
                                     data-task-field="description"
                                     data-task-index="${activeTaskIndex}"
                                 >${escapeHtml(task.description)}</textarea>
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group col-md-6 mb-3">
-                                    <label class="form-label fw-600 small">Priority</label>
-                                    <select class="form-control" data-task-field="task_priority_id" data-task-index="${activeTaskIndex}">
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label for="active_task_priority" class="${labelClass}">Priority</label>
+                                    <select id="active_task_priority" class="${selectClass}" data-task-field="task_priority_id" data-task-index="${activeTaskIndex}">
                                         ${taskPriorityOptionsHtml(task.task_priority_id)}
                                     </select>
                                 </div>
-                                <div class="form-group col-md-6 mb-3">
-                                    <label class="form-label fw-600 small">Estimated Hours</label>
+                                <div>
+                                    <label for="active_task_hours" class="${labelClass}">Estimated Hours</label>
                                     <input
                                         type="number"
+                                        id="active_task_hours"
                                         min="0"
                                         step="0.5"
-                                        class="form-control"
+                                        class="${inputClass}"
                                         placeholder="0.0"
                                         value="${escapeHtml(task.estimated_hours)}"
                                         data-task-field="estimated_hours"
@@ -493,6 +377,7 @@
             normalizeStructure();
             renderPhaseNav();
             renderPhaseEditor();
+            refreshIcons();
         };
 
         const moveItem = (items, index, direction) => {

@@ -1,71 +1,85 @@
-@extends('layouts.master')
+@extends('layouts.console')
 
-@section('subtitle', 'Members')
-@section('content_header_title', 'Members')
-@section('content_header_subtitle', 'Team membership')
+@section('title', 'Members')
 
-@section('content_body')
-    @include('admin.organization._alerts')
+@section('content_header')
+    <x-ui.page-header title="Members" description="People in your teams and the teams they belong to.">
+        @canvisit(route('admin.organization.members.create'))
+            <x-ui.button :href="route('admin.organization.members.create')">
+                <i data-lucide="user-plus" class="size-4"></i>
+                Create Member
+            </x-ui.button>
+        @endcanvisit
+    </x-ui.page-header>
+@stop
 
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="card-title mb-0">Member Directory</h3>
-            @canany(['assign-team-member', 'manage-team-members'])
-                <a href="{{ route('admin.organization.members.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Create Member
-                </a>
-            @endcanany
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Teams</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($members as $member)
-                            <tr>
-                                <td>{{ $member->name }}</td>
-                                <td>{{ $member->email }}</td>
-                                <td>
+@section('content')
+
+    <x-ui.card title="Member Directory" flush>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="border-b border-border bg-muted">
+                    <tr>
+                        <x-ui.th>Name</x-ui.th>
+                        <x-ui.th>Email</x-ui.th>
+                        <x-ui.th>Teams</x-ui.th>
+                        <x-ui.th class="text-right"><span class="sr-only">Actions</span></x-ui.th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($members as $member)
+                        <tr class="border-b border-border/70 last:border-0 hover:bg-background">
+                            <x-ui.td>
+                                <div class="flex items-center gap-3">
+                                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[12px] font-semibold text-ju-navy">
+                                        {{ \Illuminate\Support\Str::of($member->name)->explode(' ')->take(2)->map(fn ($p) => mb_substr($p, 0, 1))->implode('') }}
+                                    </span>
+                                    <span class="font-medium">{{ $member->name }}</span>
+                                </div>
+                            </x-ui.td>
+                            <x-ui.td class="text-muted-foreground">{{ $member->email }}</x-ui.td>
+                            <x-ui.td>
+                                <div class="flex flex-wrap gap-1">
                                     @forelse ($member->teams as $team)
-                                        <span class="badge badge-info">{{ $team->name }}</span>
+                                        <x-ui.badge variant="primary">{{ $team->name }}</x-ui.badge>
                                     @empty
-                                        <span class="text-muted">Unassigned</span>
+                                        <span class="text-muted-foreground">Unassigned</span>
                                     @endforelse
-                                </td>
-                                <td class="text-right">
-                                    <a href="{{ route('admin.organization.members.show', $member) }}" class="btn btn-sm btn-outline-secondary">View</a>
-                                    @canany(['manage-team-members', 'transfer-team-member'])
-                                        <a href="{{ route('admin.organization.members.edit', $member) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    @endcanany
-                                    @canany(['remove-team-member', 'manage-team-members'])
-                                        <form action="{{ route('admin.organization.members.destroy', $member) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this member?');">
+                                </div>
+                            </x-ui.td>
+                            <x-ui.td>
+                                <div class="flex items-center justify-end gap-0.5">
+                                    @canvisit(route('admin.organization.members.show', $member))
+                                        <x-ui.icon-button icon="eye" label="View member" :href="route('admin.organization.members.show', $member)" />
+                                    @endcanvisit
+                                    @canvisit(route('admin.organization.members.edit', $member))
+                                        <x-ui.icon-button icon="pencil" label="Edit member" :href="route('admin.organization.members.edit', $member)" />
+                                    @endcanvisit
+                                    @canvisit(route('admin.organization.members.destroy', $member), 'DELETE')
+                                        <form action="{{ route('admin.organization.members.destroy', $member) }}" method="POST" class="m-0" onsubmit="return confirm('Delete this member?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                            <x-ui.icon-button type="submit" icon="trash-2" label="Delete member" tone="destructive" />
                                         </form>
-                                    @endcanany
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No members found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                    @endcanvisit
+                                </div>
+                            </x-ui.td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4">
+                                <x-ui.empty-state icon="users" title="No members found." description="Members of your teams will show up here." />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+
         @if ($members->hasPages())
-            <div class="card-footer clearfix">
-                {{ $members->links() }}
-            </div>
+            <x-slot:footer>
+                <div class="w-full">{{ $members->links() }}</div>
+            </x-slot:footer>
         @endif
-    </div>
+    </x-ui.card>
 @stop

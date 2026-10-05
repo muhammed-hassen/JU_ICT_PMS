@@ -27,7 +27,7 @@ class OrganizationCrudTest extends TestCase
     public function test_authorized_user_can_create_team_with_leader_and_members(): void
     {
         $admin = User::factory()->create();
-        $admin->assignRole('System Administrator');
+        $admin->assignRole('ICT Director');
 
         $leader = User::factory()->create();
         $leader->assignRole('Team Leader');
@@ -57,7 +57,7 @@ class OrganizationCrudTest extends TestCase
     public function test_authorized_user_can_open_organization_index_pages(): void
     {
         $admin = User::factory()->create();
-        $admin->assignRole('System Administrator');
+        $admin->assignRole('ICT Director');
 
         $this->actingAs($admin)
             ->get(route('admin.organization.teams.index'))
@@ -83,7 +83,7 @@ class OrganizationCrudTest extends TestCase
     public function test_authorized_user_can_create_member_and_assign_team(): void
     {
         $admin = User::factory()->create();
-        $admin->assignRole('System Administrator');
+        $admin->assignRole('ICT Director');
 
         $team = Team::where('name', 'Software Development Team')->first();
 
@@ -120,7 +120,7 @@ class OrganizationCrudTest extends TestCase
     public function test_project_index_uses_seeded_project_permissions(): void
     {
         $admin = User::factory()->create();
-        $admin->assignRole('System Administrator');
+        $admin->assignRole('ICT Director');
 
         $this->actingAs($admin)
             ->get(route('admin.projects.index'))

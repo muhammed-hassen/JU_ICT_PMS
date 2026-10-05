@@ -53,6 +53,11 @@ class Phase extends Model
         return $this->hasMany(Task::class)->orderBy('sort_order');
     }
 
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(PhaseMilestone::class)->orderByRaw('due_date is null')->orderBy('due_date');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -86,9 +91,27 @@ class Phase extends Model
      */
     public function updateProgress(): void
     {
+        // Reload so a task that just changed is counted with its new progress.
+        $this->unsetRelation('tasks');
+
         $this->update([
             'progress_percentage' => $this->calculateProgress(),
         ]);
+
+        // Closing the last task closes the phase; reopening a task reopens it.
+        if ($this->tasks->isEmpty()) {
+            return;
+        }
+        if ($this->progress_percentage >= 100) {
+            $this->completePhase();
+        } elseif ($this->actual_end_date) {
+            $this->update([
+                'actual_end_date' => null,
+                'phase_status_id' => $this->getStatusIdByName('In Progress'),
+            ]);
+        } elseif ($this->progress_percentage > 0) {
+            $this->startPhase();
+        }
     }
 
     /**
@@ -226,7 +249,8 @@ class Phase extends Model
             return 0;
         }
 
-        return now()->diffInDays($this->end_date, false);
+        // Whole calendar days; Carbon 3 returns fractional days here.
+        return (int) now()->startOfDay()->diffInDays($this->end_date->copy()->startOfDay(), false);
     }
 
     /**
@@ -239,7 +263,7 @@ class Phase extends Model
         }
 
         if ($this->end_date->isPast()) {
-            return abs($this->end_date->diffInDays(now()));
+            return (int) abs(now()->startOfDay()->diffInDays($this->end_date->copy()->startOfDay(), false));
         }
 
         return 0;

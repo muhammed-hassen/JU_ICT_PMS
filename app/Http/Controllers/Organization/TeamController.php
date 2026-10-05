@@ -12,6 +12,19 @@ use Illuminate\Validation\Rule;
 
 class TeamController extends Controller
 {
+    /** Organization chart: Director, then top-level teams, their sub-teams, leaders and members. */
+    public function chart(): View
+    {
+        return view('admin.organization.chart', [
+            'directors' => User::whereHas('roles', fn ($q) => $q->where('name', 'ICT Director'))->orderBy('name')->get(),
+            'teams' => Team::query()
+                ->whereNull('parent_team_id')
+                ->with(['teamLeader', 'members', 'childTeams.teamLeader', 'childTeams.members', 'childTeams.childTeams'])
+                ->orderBy('name')
+                ->get(),
+        ]);
+    }
+
     public function index(): View
     {
         $user = auth()->user();

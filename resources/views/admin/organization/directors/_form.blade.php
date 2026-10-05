@@ -1,39 +1,36 @@
-<div class="card">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="name">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $director->name) }}" required>
-                    @error('name')<span class="invalid-feedback">{{ $message }}</span>@enderror
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="email">Email <span class="text-danger">*</span></label>
-                    <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $director->email) }}" required>
-                    @error('email')<span class="invalid-feedback">{{ $message }}</span>@enderror
-                </div>
-            </div>
+<x-ui.card class="max-w-3xl" title="Director details" :description="$director->exists ? 'Leave the password empty to keep the current one.' : 'Fields marked * are required.'">
+    <div class="grid gap-5 sm:grid-cols-2">
+        <div>
+            <x-ui.label for="name">Name <span class="text-destructive">*</span></x-ui.label>
+            <x-ui.input type="text" name="name" id="name" :value="old('name', $director->name)" :invalid="$errors->has('name')" required />
+            @error('name')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
         </div>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="password">Password @unless($director->exists)<span class="text-danger">*</span>@endunless</label>
-                    <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" @unless($director->exists) required @endunless>
-                    @error('password')<span class="invalid-feedback">{{ $message }}</span>@enderror
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="password_confirmation">Confirm Password @unless($director->exists)<span class="text-danger">*</span>@endunless</label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" @unless($director->exists) required @endunless>
-                </div>
-            </div>
+        <div>
+            <x-ui.label for="email">Email <span class="text-destructive">*</span></x-ui.label>
+            <x-ui.input type="email" name="email" id="email" :value="old('email', $director->email)" :invalid="$errors->has('email')" required />
+            @error('email')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+        </div>
+        <div>
+            <x-ui.label for="password">Password @unless($director->exists)<span class="text-destructive">*</span>@endunless</x-ui.label>
+            <x-ui.input type="password" name="password" id="password" autocomplete="new-password" :invalid="$errors->has('password')" :required="! $director->exists" />
+            @error('password')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+        </div>
+        <div>
+            <x-ui.label for="password_confirmation">Confirm Password @unless($director->exists)<span class="text-destructive">*</span>@endunless</x-ui.label>
+            <x-ui.input type="password" name="password_confirmation" id="password_confirmation" autocomplete="new-password" :required="! $director->exists" />
         </div>
     </div>
-    <div class="card-footer">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ $submitLabel }}</button>
-        <a href="{{ route('admin.organization.directors.index') }}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
-    </div>
-</div>
+
+    <x-slot:footer>
+        <span class="text-muted-foreground">Saving gives this user the ICT Director role.</span>
+        <div class="flex items-center gap-2">
+            @canvisit(route('admin.organization.directors.index'))
+                <x-ui.button variant="outline" :href="route('admin.organization.directors.index')">Cancel</x-ui.button>
+            @endcanvisit
+            <x-ui.button type="submit">
+                <i data-lucide="save" class="size-4"></i>
+                {{ $submitLabel }}
+            </x-ui.button>
+        </div>
+    </x-slot:footer>
+</x-ui.card>

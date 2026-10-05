@@ -36,9 +36,15 @@ class TeamLeaderController extends Controller
         }
 
         $teams = Team::with('teamLeader')->orderBy('name')->get();
+
+        // Only offer users who are not already Team Leaders
+        $eligibleUsers = User::whereDoesntHave('roles', fn ($q) => $q->where('name', 'Team Leader'))
+            ->orderBy('name')
+            ->get();
+
         $teamLeader = new User;
 
-        return view('admin.organization.team-leaders.create', compact('teams', 'teamLeader'));
+        return view('admin.organization.team-leaders.create', compact('teams', 'teamLeader', 'eligibleUsers'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -50,22 +56,18 @@ class TeamLeaderController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'team_ids' => 'nullable|array',
+            'user_id'    => 'required|exists:users,id',
+            'team_ids'   => 'nullable|array',
             'team_ids.*' => 'exists:teams,id',
         ]);
 
         DB::transaction(function () use ($validated) {
-            $teamLeader = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => bcrypt($validated['password']),
-                'email_verified_at' => now(),
-            ]);
+            $teamLeader = User::findOrFail($validated['user_id']);
 
-            $teamLeader->assignRole('Team Leader');
+            // Give the Team Leader role if they don't already have it
+            if (! $teamLeader->hasRole('Team Leader')) {
+                $teamLeader->assignRole('Team Leader');
+            }
 
             if (! empty($validated['team_ids'])) {
                 Team::whereIn('id', $validated['team_ids'])->update(['team_leader_id' => $teamLeader->id]);
@@ -73,7 +75,7 @@ class TeamLeaderController extends Controller
         });
 
         return redirect()->route('admin.organization.team-leaders.index')
-            ->with('success', 'Team leader created successfully.');
+            ->with('success', 'Team leader assigned successfully.');
     }
 
     public function show(User $teamLeader): View

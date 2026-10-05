@@ -3,8 +3,8 @@
 namespace Tests\Feature\Templates;
 
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ProjectTemplateCrudTest extends TestCase
@@ -135,9 +135,6 @@ class ProjectTemplateCrudTest extends TestCase
             ->assertOk()
             ->assertSee('Create Template')
             ->assertSee('Build the default phase and task structure')
-            ->assertSee('card-elevated', false)
-            ->assertSee('bg-primary-gradient', false)
-            ->assertSee('bg-secondary-gradient', false)
             ->assertSee('This template is active and available for use')
             ->assertSee('Phases')
             ->assertSee('Phase Details')
@@ -159,7 +156,6 @@ class ProjectTemplateCrudTest extends TestCase
             ->assertOk()
             ->assertSee('Project Templates')
             ->assertSee('Template Catalog')
-            ->assertSee('card-elevated', false)
             ->assertSee('template-count-label', false)
             ->assertSee('template-index-table', false)
             ->assertSee('Create Template')
@@ -189,7 +185,7 @@ class ProjectTemplateCrudTest extends TestCase
             ->assertSee('A Template 01')
             ->assertSee('A Template 08')
             ->assertDontSee('A Template 09')
-            ->assertSee('Showing 1 to 8 of 16 templates');
+            ->assertSee('Showing 1 to 8 of 17 templates');
 
         $this->actingAs($admin)
             ->get(route('admin.templates.index', ['page' => 2]))

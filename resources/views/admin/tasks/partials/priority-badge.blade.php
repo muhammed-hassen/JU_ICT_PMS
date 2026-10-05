@@ -1,42 +1,31 @@
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
-
 @php
     $priorityLevel = $task->getPriorityLevelAttribute();
-    $badgeColor = $task->getPriorityBadgeColorAttribute();
     $deadlineStatus = $task->getDeadlineStatusAttribute();
-    $deadlineColor = $task->getDeadlineColorAttribute();
+
+    // Colour only for the two levels that should change what someone does next.
+    $priorityVariant = ['Critical' => 'destructive', 'High' => 'warning'][$priorityLevel] ?? 'neutral';
+    $priorityIcon = ['Critical' => 'circle-alert', 'High' => 'arrow-up', 'Medium' => 'minus'][$priorityLevel] ?? 'arrow-down';
+    $deadlineVariant = ['overdue' => 'destructive', 'urgent' => 'warning'][$deadlineStatus] ?? 'neutral';
+    $deadlineIcon = ['overdue' => 'triangle-alert', 'urgent' => 'clock'][$deadlineStatus] ?? 'calendar';
 @endphp
 
-<div class="d-flex flex-wrap align-items-center gap-1">
-    <span class="badge badge-{{ $badgeColor }} priority-badge" title="Priority: {{ $priorityLevel }}">
-        @if($priorityLevel == 'Critical')
-            <i class="fas fa-exclamation-circle"></i>
-        @elseif($priorityLevel == 'High')
-            <i class="fas fa-arrow-up"></i>
-        @elseif($priorityLevel == 'Medium')
-            <i class="fas fa-minus"></i>
-        @else
-            <i class="fas fa-arrow-down"></i>
-        @endif
+<div class="flex flex-wrap items-center gap-1">
+    <x-ui.badge :variant="$priorityVariant" title="Priority: {{ $priorityLevel }}">
+        <i data-lucide="{{ $priorityIcon }}" class="size-3"></i>
         {{ $priorityLevel }}
-    </span>
+    </x-ui.badge>
 
-    @if($task->deadline)
-        <span class="badge badge-{{ $deadlineColor }} deadline-badge ml-1" title="Deadline: {{ $task->deadline->format('M d, Y') }}">
-            @if($deadlineStatus == 'overdue')
-                <i class="fas fa-exclamation-triangle"></i>
-            @elseif($deadlineStatus == 'urgent')
-                <i class="fas fa-clock"></i>
-            @else
-                <i class="fas fa-calendar-alt"></i>
-            @endif
+    @if ($task->deadline)
+        <x-ui.badge :variant="$deadlineVariant" title="Deadline: {{ $task->deadline->format('M d, Y') }}">
+            <i data-lucide="{{ $deadlineIcon }}" class="size-3"></i>
             {{ $task->getDeadlineBadgeAttribute() }}
-        </span>
+        </x-ui.badge>
     @endif
 
-    @if($task->isOverdue())
-        <span class="badge badge-danger ml-1">
-            <i class="fas fa-exclamation-circle"></i> Overdue
-        </span>
+    @if ($task->isOverdue() && $deadlineStatus !== 'overdue')
+        <x-ui.badge variant="destructive">
+            <i data-lucide="circle-alert" class="size-3"></i>
+            Overdue
+        </x-ui.badge>
     @endif
 </div>

@@ -121,7 +121,7 @@ class ProjectProgressService
         $overdueTasks = Task::whereHas('phase', function ($q) use ($project) {
             $q->where('project_id', $project->id);
         })
-            ->where('due_date', '<', now())
+            ->where('deadline', '<', now())
             ->whereDoesntHave('status', function ($q) {
                 $q->whereIn('name', ['Done', 'Completed']);
             })

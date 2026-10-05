@@ -1,10 +1,12 @@
-@extends('layouts.master')
+@extends('layouts.console')
 
-@section('subtitle', 'Edit Team')
-@section('content_header_title', 'Edit Team')
-@section('content_header_subtitle', $team->name)
+@section('title', 'Edit Team')
 
-@section('content_body')
+@section('content_header')
+    <x-ui.page-header title="Edit Team" :description="$team->name" />
+@stop
+
+@section('content')
     <form action="{{ route('admin.organization.teams.update', $team) }}" method="POST">
         @csrf
         @method('PUT')

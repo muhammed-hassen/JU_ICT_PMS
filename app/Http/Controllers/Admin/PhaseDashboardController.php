@@ -16,7 +16,7 @@ class PhaseDashboardController extends Controller
      */
     public function index(): View
     {
-        $projects = Project::query()
+        $projects = $this->visibleProjects()
             ->withCount('phases')
             ->with(['phases' => function ($query) {
                 $query->withCount('tasks');
@@ -24,7 +24,17 @@ class PhaseDashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return view('admin.phases.dashboard', compact('projects'));
+        // Stat cards count only what this user can see; they used to count the whole system.
+        $projectIds = $this->visibleProjects()->pluck('id');
+        $totals = [
+            'projects' => $projectIds->count(),
+            'phases' => Phase::whereIn('project_id', $projectIds)->count(),
+            'tasks' => Task::whereHas('phase', fn ($q) => $q->whereIn('project_id', $projectIds))->count(),
+            'byStatus' => $this->visibleProjects()->get(['status'])->countBy('status')->all(),
+            'completedPhases' => Phase::whereIn('project_id', $projectIds)->whereHas('status', fn ($q) => $q->where('name', 'Completed'))->count(),
+        ];
+
+        return view('admin.phases.dashboard', compact('projects', 'totals'));
     }
 
     /**
@@ -35,7 +45,7 @@ class PhaseDashboardController extends Controller
         $projectId = $request->input('project_id');
 
         if ($projectId) {
-            $project = Project::with(['phases.tasks'])->findOrFail($projectId);
+            $project = $this->visibleProjects()->with(['phases.tasks'])->findOrFail($projectId);
             $phases = $project->phases;
 
             return response()->json([
@@ -56,10 +66,28 @@ class PhaseDashboardController extends Controller
             ]);
         }
 
+        $projectIds = $this->visibleProjects()->pluck('id');
+
         return response()->json([
-            'total_projects' => Project::count(),
-            'total_phases' => Phase::count(),
-            'total_tasks' => Task::count(),
+            'total_projects' => $projectIds->count(),
+            'total_phases' => Phase::whereIn('project_id', $projectIds)->count(),
+            'total_tasks' => Task::whereHas('phase', fn ($q) => $q->whereIn('project_id', $projectIds))->count(),
         ]);
+    }
+
+    /**
+     * Same scoping as the projects list: the Director sees everything, everyone
+     * else only the projects they can open.
+     */
+    private function visibleProjects()
+    {
+        $user = auth()->user();
+        $query = Project::query();
+
+        if (! $user->isDirector()) {
+            $query->whereIn('id', $user->getVisibleProjectIds() ?: [0]);
+        }
+
+        return $query;
     }
 }

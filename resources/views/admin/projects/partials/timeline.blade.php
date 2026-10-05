@@ -1,101 +1,42 @@
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
-<div class="row">
-    <div class="col-md-12">
-        <div class="card card-warning card-outline">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-clock"></i> Project Timeline
-                </h3>
-                <div class="card-tools">
-                    <span class="badge bg-warning">{{ count($timelineData) }} Phases</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="timeline">
-                    @foreach($timelineData as $phase)
-                        <div>
-                            <i class="fas fa-{{ $phase['progress'] >= 100 ? 'check-circle' : 'circle' }} 
-                                       bg-{{ $phase['progress'] >= 100 ? 'success' : ($phase['progress'] > 0 ? 'warning' : 'secondary') }}"></i>
-                            <div class="timeline-item">
-                                <span class="time">
-                                    <i class="fas fa-clock"></i>
-                                    @if($phase['start'] && $phase['end'])
-                                        {{ \Carbon\Carbon::parse($phase['start'])->format('M d') }} - 
-                                        {{ \Carbon\Carbon::parse($phase['end'])->format('M d, Y') }}
-                                    @else
-                                        No dates set
-                                    @endif
-                                </span>
-                                <h3 class="timeline-header">
-                                    <a href="{{ route('admin.phases.show', $phase['id']) }}">
-                                        {{ $phase['name'] }}
-                                    </a>
-                                    <span class="badge badge-{{ $phase['color'] }} ml-2">
-                                        {{ $phase['status'] }}
-                                    </span>
-                                </h3>
-                                <div class="timeline-body">
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar bg-{{ $phase['progress'] >= 100 ? 'success' : 'primary' }}"
-                                             role="progressbar"
-                                             style="width: {{ $phase['progress'] }}%">
-                                            {{ $phase['progress'] }}%
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                    
-                    @if(empty($timelineData))
-                        <div class="text-center text-muted p-4">
-                            <i class="fas fa-inbox fa-2x"></i>
-                            <p class="mt-2">No phases created yet.</p>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<x-ui.card class="mt-6" title="Timeline" :description="count($timelineData) . ' ' . Str::plural('phase', count($timelineData))">
+    @if (empty($timelineData))
+        <x-ui.empty-state icon="calendar-range" title="No phases yet" description="Phases appear here in order once they are created." class="py-6" />
+    @else
+        <ol class="relative m-0 list-none p-0">
+            @foreach ($timelineData as $phase)
+                @php
+                    $done = $phase['progress'] >= 100;
+                    $started = $phase['progress'] > 0;
+                @endphp
+                <li class="relative pb-5 pl-9 last:pb-0">
+                    @unless ($loop->last)
+                        <span class="absolute left-[11px] top-7 bottom-0 w-px bg-border" aria-hidden="true"></span>
+                    @endunless
+                    <span @class([
+                        'absolute left-0 top-0.5 flex size-6 items-center justify-center rounded-full border',
+                        'border-success bg-success text-white' => $done,
+                        'border-primary bg-card text-primary' => ! $done && $started,
+                        'border-border bg-card text-muted-foreground' => ! $started,
+                    ])>
+                        <i data-lucide="{{ $done ? 'check' : 'circle' }}" class="size-3.5"></i>
+                    </span>
 
-@push('css')
-<style>
-.timeline {
-    position: relative;
-    padding: 10px 0;
-}
-.timeline > div {
-    margin-bottom: 20px;
-}
-.timeline > div > i {
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-}
-.timeline-item {
-    margin-left: 50px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 5px;
-    border-left: 4px solid #17a2b8;
-}
-.timeline-item .time {
-    float: right;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-.timeline-item .timeline-header {
-    margin-top: 0;
-    font-size: 1rem;
-}
-.timeline-item .timeline-body {
-    margin-top: 10px;
-}
-</style>
-@endpush
+                    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('admin.phases.show', $phase['id']) }}" class="font-semibold text-foreground no-underline hover:text-primary hover:no-underline">{{ $phase['name'] }}</a>
+                            <x-ui.badge :variant="$phase['color']">{{ $phase['status'] }}</x-ui.badge>
+                        </div>
+                        <span class="tabular text-[13px] text-muted-foreground">
+                            @if ($phase['start'] && $phase['end'])
+                                {{ \Carbon\Carbon::parse($phase['start'])->format('M d') }} to {{ \Carbon\Carbon::parse($phase['end'])->format('M d, Y') }}
+                            @else
+                                No dates set
+                            @endif
+                        </span>
+                    </div>
+                    <x-ui.progress class="mt-2 max-w-md" :value="$phase['progress']" />
+                </li>
+            @endforeach
+        </ol>
+    @endif
+</x-ui.card>

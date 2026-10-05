@@ -54,6 +54,15 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /**
+     * Tasks where this user is the assignee (tasks.assigned_to).
+     * Used by the reports page; it was called but never defined.
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assigned_to');
+    }
+
     public function createdTasks(): HasMany
     {
         return $this->hasMany(Task::class, 'created_by');
@@ -66,9 +75,10 @@ class User extends Authenticatable
 
     // ========== ROLE CHECK METHODS ==========
 
+    /** Sees all project work. The System Administrator is not included: that role runs accounts, not projects. */
     public function isDirector(): bool
     {
-        return $this->hasRole(['ICT Director', 'System Administrator', 'Super Admin']);
+        return $this->hasRole(['ICT Director', 'Super Admin']);
     }
 
     public function isTeamLeader(): bool
@@ -76,14 +86,9 @@ class User extends Authenticatable
         return $this->hasRole('Team Leader') || $this->isDirector();
     }
 
-    public function isTeamMember(): bool
+    public function isSystemAdmin(): bool
     {
-        return $this->hasRole('Team Member') || $this->isTeamLeader();
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->hasRole(['ICT Director', 'System Administrator', 'Super Admin']);
+        return $this->hasRole('System Administrator');
     }
 
     // ========== TEAM METHODS ==========
@@ -102,6 +107,52 @@ class User extends Authenticatable
         }
 
         return array_unique($teamIds);
+    }
+
+    /**
+     * People this user may start a conversation with: anyone in one of their
+     * teams (its members and its leader) plus the Director and System
+     * Administrators. Team Leaders can also reach the other Team Leaders.
+     * The Director and System Administrators can message everyone.
+     */
+    public function messageableUsers(): Collection
+    {
+        $query = User::where('id', '!=', $this->id)->orderBy('name');
+
+        if (! $this->isDirector() && ! $this->isSystemAdmin()) {
+            $teamIds = $this->getTeamIds();
+            $query->where(function ($q) use ($teamIds) {
+                $q->whereHas('teams', fn ($t) => $t->whereIn('teams.id', $teamIds))
+                    ->orWhereHas('ledTeams', fn ($t) => $t->whereIn('id', $teamIds))
+                    ->orWhereHas('roles', fn ($r) => $r->whereIn('name', $this->isTeamLeader()
+                        // Leaders coordinate across teams, so they reach every other leader.
+                        ? ['ICT Director', 'System Administrator', 'Super Admin', 'Team Leader']
+                        : ['ICT Director', 'System Administrator', 'Super Admin']));
+            });
+        }
+
+        return $query->get();
+    }
+
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')
+            ->withPivot('last_read_at')
+            ->withTimestamps();
+    }
+
+    /** Conversations with at least one message this user has not seen. */
+    public function unreadConversationCount(): int
+    {
+        return $this->conversations()
+            ->whereHas('messages', function ($q) {
+                $q->where('messages.user_id', '!=', $this->id)
+                    ->where(function ($w) {
+                        $w->whereNull('conversation_participants.last_read_at')
+                            ->orWhereColumn('messages.created_at', '>', 'conversation_participants.last_read_at');
+                    });
+            })
+            ->count();
     }
 
     public function getTeamMembers(): Collection

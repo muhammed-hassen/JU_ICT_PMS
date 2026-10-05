@@ -26,8 +26,10 @@ class TaskController extends Controller
     {
         $this->middleware(['auth']);
         $this->middleware('permission:view-tasks')->only(['index', 'show', 'myTasks', 'kanban']);
-        $this->middleware('permission:create-task')->only(['create', 'store']);
-        $this->middleware('permission:edit-task')->only(['edit', 'update', 'updateStatus', 'updateProgress', 'transition']);
+        $this->middleware('permission:create-task')->only(['choosePhase', 'create', 'store']);
+        $this->middleware('permission:edit-task')->only(['edit', 'update']);
+        // Members work on their own tasks; authorizeTaskWork() checks which task.
+        $this->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress')->only(['updateStatus', 'updateProgress', 'transition']);
         $this->middleware('permission:delete-task')->only(['destroy']);
         $this->middleware('permission:assign-task')->only(['assign', 'unassign', 'assignMultiple']);
 
@@ -43,27 +45,10 @@ class TaskController extends Controller
         $user = auth()->user();
 
         $query = Task::query()
-            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator', 'assignedUsers']);
+            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator', 'assignedUsers'])
+            ->withCount(['subtasks', 'subtasks as subtasks_done_count' => fn ($q) => $q->where('is_done', true)]);
 
-        if (! $user->isDirector()) {
-            if ($user->isTeamLeader()) {
-                $teamIds = $user->getTeamIds();
-                $teamMemberIds = User::whereHas('teams', function ($q) use ($teamIds) {
-                    $q->whereIn('teams.id', $teamIds);
-                })->pluck('id')->toArray();
-                $teamMemberIds[] = $user->id;
-                $teamMemberIds = array_unique($teamMemberIds);
-
-                $query->whereIn('assigned_to', $teamMemberIds)
-                    ->orWhere('created_by', $user->id);
-            } else {
-                $query->where('assigned_to', $user->id)
-                    ->orWhere('created_by', $user->id)
-                    ->orWhereHas('assignedUsers', function ($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-            }
-        }
+        $this->limitToVisibleTasks($query, $user);
 
         if ($request->filled('status')) {
             $query->where('task_status_id', $request->status);
@@ -103,8 +88,7 @@ class TaskController extends Controller
 
         $statuses = TaskStatus::orderBy('sort_order')->get();
         $priorities = TaskPriority::orderBy('level_order')->get();
-        $users = User::orderBy('name')->get();
-        $projects = Project::all();
+        [$projects, $users] = $this->filterOptions($user);
 
         return view('admin.tasks.index', compact('tasks', 'statuses', 'priorities', 'users', 'projects'));
     }
@@ -118,27 +102,10 @@ class TaskController extends Controller
         $user = auth()->user();
 
         $query = Task::query()
-            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator']);
+            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator'])
+            ->withCount(['subtasks', 'subtasks as subtasks_done_count' => fn ($q) => $q->where('is_done', true)]);
 
-        if (! $user->isDirector()) {
-            if ($user->isTeamLeader()) {
-                $teamIds = $user->getTeamIds();
-                $teamMemberIds = User::whereHas('teams', function ($q) use ($teamIds) {
-                    $q->whereIn('teams.id', $teamIds);
-                })->pluck('id')->toArray();
-                $teamMemberIds[] = $user->id;
-                $teamMemberIds = array_unique($teamMemberIds);
-
-                $query->whereIn('assigned_to', $teamMemberIds)
-                    ->orWhere('created_by', $user->id);
-            } else {
-                $query->where('assigned_to', $user->id)
-                    ->orWhere('created_by', $user->id)
-                    ->orWhereHas('assignedUsers', function ($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-            }
-        }
+        $this->limitToVisibleTasks($query, $user);
 
         if ($request->filled('project')) {
             $query->whereHas('phase', function ($q) use ($request) {
@@ -158,8 +125,7 @@ class TaskController extends Controller
         $boardData = $this->workflowService->getTaskBoardData($tasks);
         $statusStats = $this->workflowService->getStatusStats($tasks);
 
-        $projects = Project::all();
-        $users = User::orderBy('name')->get();
+        [$projects, $users] = $this->filterOptions($user);
         $priorities = TaskPriority::orderBy('level_order')->get();
 
         return view('admin.tasks.kanban', compact(
@@ -180,7 +146,8 @@ class TaskController extends Controller
         $user = auth()->user();
 
         $query = Task::query()
-            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator', 'assignedUsers']);
+            ->with(['phase.project', 'status', 'priority', 'assignee', 'creator', 'assignedUsers'])
+            ->withCount(['subtasks', 'subtasks as subtasks_done_count' => fn ($q) => $q->where('is_done', true)]);
 
         if ($user->isTeamLeader() && ! $user->isDirector()) {
             $teamIds = $user->getTeamIds();
@@ -244,6 +211,43 @@ class TaskController extends Controller
     // CRUD OPERATIONS
     // ============================================================
 
+    /**
+     * "New task" without a phase yet: pick the phase first. If there is no
+     * project, or no phase in any project, say which to create first.
+     */
+    public function choosePhase(): View
+    {
+        $projects = auth()->user()->getVisibleProjects()
+            ->load(['phases' => fn ($q) => $q->orderBy('sort_order')])
+            ->sortBy('name');
+
+        if ($projects->isEmpty()) {
+            return view('admin.needs-first', [
+                'title' => 'Create Task',
+                'icon' => 'folder-kanban',
+                'heading' => 'Create a project first',
+                'message' => 'Tasks live inside a phase, and phases inside a project. You have no projects yet, so start there.',
+                'actionLabel' => 'Create project',
+                'actionRoute' => route('admin.projects.create'),
+            ]);
+        }
+
+        if ($projects->every(fn ($project) => $project->phases->isEmpty())) {
+            $first = $projects->first();
+
+            return view('admin.needs-first', [
+                'title' => 'Create Task',
+                'icon' => 'layers',
+                'heading' => 'Add a phase first',
+                'message' => 'Tasks live inside a phase, and none of your projects has a phase yet. Add one to '.$first->name.' to get started.',
+                'actionLabel' => 'Add phase',
+                'actionRoute' => route('admin.projects.phases.create', $first),
+            ]);
+        }
+
+        return view('admin.tasks.choose-phase', ['projects' => $projects]);
+    }
+
     public function create(Phase $phase): View
     {
         $user = auth()->user();
@@ -288,6 +292,9 @@ class TaskController extends Controller
             'task_priority_id' => 'nullable|exists:task_priorities,id',
             'assigned_to' => 'nullable|exists:users,id',
             'estimated_hours' => 'nullable|numeric|min:0',
+            'estimated_cost' => 'nullable|numeric|min:0',
+            'actual_cost' => 'nullable|numeric|min:0',
+            'resources' => 'nullable|string|max:2000',
             'start_date' => 'nullable|date',
             'deadline' => 'nullable|date|after_or_equal:start_date',
             'sort_order' => 'nullable|integer|min:1',
@@ -303,6 +310,9 @@ class TaskController extends Controller
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'estimated_hours' => $validated['estimated_hours'] ?? null,
+                'estimated_cost' => $validated['estimated_cost'] ?? null,
+                'actual_cost' => $validated['actual_cost'] ?? null,
+                'resources' => $validated['resources'] ?? null,
                 'start_date' => $validated['start_date'] ?? null,
                 'deadline' => $validated['deadline'] ?? null,
                 'sort_order' => $validated['sort_order'] ?? $maxOrder + 1,
@@ -412,11 +422,19 @@ class TaskController extends Controller
             'task_priority_id' => 'nullable|exists:task_priorities,id',
             'assigned_to' => 'nullable|exists:users,id',
             'estimated_hours' => 'nullable|numeric|min:0',
+            'estimated_cost' => 'nullable|numeric|min:0',
+            'actual_cost' => 'nullable|numeric|min:0',
+            'resources' => 'nullable|string|max:2000',
             'start_date' => 'nullable|date',
             'deadline' => 'nullable|date|after_or_equal:start_date',
             'progress_percentage' => 'nullable|numeric|min:0|max:100',
             'sort_order' => 'nullable|integer|min:1',
         ]);
+
+        // The edit form also carries status; hold it to the same rule as the status buttons.
+        if ($task->task_status_id != $validated['task_status_id']) {
+            $this->authorizeTaskWork($task, TaskStatus::find($validated['task_status_id'])->name);
+        }
 
         DB::transaction(function () use ($request, $task, $validated) {
             $oldAssignee = $task->assigned_to;
@@ -429,6 +447,9 @@ class TaskController extends Controller
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'estimated_hours' => $validated['estimated_hours'] ?? null,
+                'estimated_cost' => $validated['estimated_cost'] ?? null,
+                'actual_cost' => $validated['actual_cost'] ?? null,
+                'resources' => $validated['resources'] ?? null,
                 'start_date' => $validated['start_date'] ?? null,
                 'deadline' => $validated['deadline'] ?? null,
                 'sort_order' => $validated['sort_order'] ?? $task->sort_order,
@@ -604,18 +625,13 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isDirector()) {
-            if (! $user->hasPermissionTo('edit-task') && ! $user->hasPermissionTo('edit-own-task') && ! $user->hasPermissionTo('complete-task')) {
-                abort(403, 'You do not have permission to update task status.');
-            }
-        }
-
         $validated = $request->validate([
             'task_status_id' => 'required|exists:task_statuses,id',
             'note' => 'nullable|string',
         ]);
 
         $newStatus = TaskStatus::find($validated['task_status_id']);
+        $this->authorizeTaskWork($task, $newStatus->name);
 
         if (! $task->canTransitionTo($newStatus->name)) {
             return back()->with('error', 'Invalid status transition.');
@@ -632,11 +648,7 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isDirector()) {
-            if (! $user->hasPermissionTo('edit-task') && ! $user->hasPermissionTo('edit-own-task')) {
-                abort(403, 'You do not have permission to update task progress.');
-            }
-        }
+        $this->authorizeTaskWork($task);
 
         $validated = $request->validate([
             'progress_percentage' => 'required|numeric|min:0|max:100',
@@ -675,14 +687,12 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isDirector() && ! $user->hasPermissionTo('edit-task')) {
-            abort(403, 'You do not have permission to change task status.');
-        }
-
         $validated = $request->validate([
             'status' => 'required|string|exists:task_statuses,name',
             'note' => 'nullable|string|max:500',
         ]);
+
+        $this->authorizeTaskWork($task, $validated['status']);
 
         if (! $task->canTransitionTo($validated['status'])) {
             return back()->with('error', 'Invalid status transition.');
@@ -708,10 +718,6 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isDirector() && ! $user->hasPermissionTo('edit-task')) {
-            return response()->json(['error' => 'Permission denied'], 403);
-        }
-
         $validated = $request->validate([
             'task_id' => 'required|exists:tasks,id',
             'status' => 'required|string|exists:task_statuses,name',
@@ -719,6 +725,7 @@ class TaskController extends Controller
         ]);
 
         $task = Task::find($validated['task_id']);
+        $this->authorizeTaskWork($task, $validated['status']);
 
         if (! $task->canTransitionTo($validated['status'])) {
             return response()->json(['error' => 'Invalid status transition'], 422);
@@ -737,6 +744,88 @@ class TaskController extends Controller
     // ============================================================
     // HELPER METHODS
     // ============================================================
+
+    /**
+     * Who may move a task along. Editors (Team Leaders, the Director) may
+     * change any task they can see. Everyone else only the tasks assigned to
+     * them, and completing a task that is under review stays with a reviewer.
+     */
+    protected function authorizeTaskWork(Task $task, ?string $toStatus = null): void
+    {
+        $user = auth()->user();
+
+        if ($user->isDirector()) {
+            return;
+        }
+
+        if ($user->can('edit-task')) {
+            abort_unless(in_array($task->id, $user->getVisibleTaskIds()), 403, 'This task is outside your teams.');
+
+            return;
+        }
+
+        abort_unless(
+            $task->isAssignedTo($user) && $user->hasAnyPermission(['edit-own-task', 'complete-task', 'update-task-progress']),
+            403,
+            'You can only update tasks assigned to you.'
+        );
+
+        abort_if(
+            $toStatus === 'Completed' && ! $user->can('review-task'),
+            403,
+            'Your team leader marks a task completed after reviewing it. Move it to Under Review instead.'
+        );
+    }
+
+    /**
+     * Only the tasks this user may see. The OR conditions sit inside one
+     * where() group; left loose, they swallowed every filter after them
+     * ("A or B and project = 3"), which is why the board filters did nothing.
+     */
+    protected function limitToVisibleTasks($query, User $user): void
+    {
+        if ($user->isDirector()) {
+            return;
+        }
+
+        if ($user->isTeamLeader()) {
+            $teamIds = $user->getTeamIds();
+            $teamMemberIds = User::whereHas('teams', function ($q) use ($teamIds) {
+                $q->whereIn('teams.id', $teamIds);
+            })->pluck('id')->push($user->id)->unique()->all();
+
+            $query->where(function ($q) use ($teamMemberIds, $user) {
+                $q->whereIn('assigned_to', $teamMemberIds)
+                    ->orWhere('created_by', $user->id);
+            });
+
+            return;
+        }
+
+        $query->where(function ($q) use ($user) {
+            $q->where('assigned_to', $user->id)
+                ->orWhere('created_by', $user->id)
+                ->orWhereHas('assignedUsers', function ($sub) use ($user) {
+                    $sub->where('user_id', $user->id);
+                });
+        });
+    }
+
+    /** Projects and people for the filter dropdowns, limited to what this user can see. */
+    protected function filterOptions(User $user): array
+    {
+        if ($user->isDirector()) {
+            return [Project::orderBy('name')->get(), User::orderBy('name')->get()];
+        }
+
+        $teamIds = $user->getTeamIds();
+        $users = User::where('id', $user->id)
+            ->orWhereHas('teams', fn ($q) => $q->whereIn('teams.id', $teamIds))
+            ->orderBy('name')
+            ->get();
+
+        return [$user->getVisibleProjects()->sortBy('name')->values(), $users];
+    }
 
     protected function getAvailableUsers(Phase $phase): Collection
     {

@@ -1,71 +1,88 @@
-@extends('layouts.master')
+@extends('layouts.console')
 
-@section('subtitle', 'Team Leaders')
-@section('content_header_title', 'Team Leaders')
-@section('content_header_subtitle', 'Team leadership')
+@section('title', 'Team Leaders')
 
-@section('content_body')
-    @include('admin.organization._alerts')
+@section('content_header')
+    <x-ui.page-header title="Team Leaders" description="The people who lead each team.">
+        @canvisit(route('admin.organization.team-leaders.create'))
+            <x-ui.button :href="route('admin.organization.team-leaders.create')">
+                <i data-lucide="plus" class="size-4"></i>
+                Create Team Leader
+            </x-ui.button>
+        @endcanvisit
+    </x-ui.page-header>
+@endsection
 
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="card-title mb-0">Team Leader Directory</h3>
-            @can('assign-team-leader')
-                <a href="{{ route('admin.organization.team-leaders.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Create Team Leader
-                </a>
-            @endcan
+@section('content')
+
+    <x-ui.card flush>
+        <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h3 class="m-0 font-sans text-[15px] font-semibold">Team Leader Directory</h3>
+            <x-ui.badge>{{ $teamLeaders->total() }} total</x-ui.badge>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
+
+        @if ($teamLeaders->isEmpty())
+            <x-ui.empty-state icon="users" title="No team leaders found." description="Team leaders you add will be listed here." />
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-border bg-muted">
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Leads</th>
-                            <th class="text-right">Actions</th>
+                            <x-ui.th>Name</x-ui.th>
+                            <x-ui.th>Email</x-ui.th>
+                            <x-ui.th>Leads</x-ui.th>
+                            <x-ui.th class="text-right"><span class="sr-only">Actions</span></x-ui.th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($teamLeaders as $teamLeader)
-                            <tr>
-                                <td>{{ $teamLeader->name }}</td>
-                                <td>{{ $teamLeader->email }}</td>
-                                <td>
-                                    @forelse ($teamLeader->ledTeams as $team)
-                                        <span class="badge badge-info">{{ $team->name }}</span>
-                                    @empty
-                                        <span class="text-muted">No teams assigned</span>
-                                    @endforelse
-                                </td>
-                                <td class="text-right">
-                                    <a href="{{ route('admin.organization.team-leaders.show', $teamLeader) }}" class="btn btn-sm btn-outline-secondary">View</a>
-                                    @canany(['assign-team-leader', 'manage-team-members'])
-                                        <a href="{{ route('admin.organization.team-leaders.edit', $teamLeader) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    @endcanany
-                                    @can('assign-team-leader')
-                                        <form action="{{ route('admin.organization.team-leaders.destroy', $teamLeader) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this team leader?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                        </form>
-                                    @endcan
-                                </td>
+                        @foreach ($teamLeaders as $teamLeader)
+                            <tr class="border-b border-border/70 last:border-0 hover:bg-background">
+                                <x-ui.td>
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[12px] font-semibold text-ju-navy">
+                                            {{ \Illuminate\Support\Str::of($teamLeader->name)->explode(' ')->take(2)->map(fn ($p) => mb_substr($p, 0, 1))->implode('') }}
+                                        </span>
+                                        <span class="font-medium">{{ $teamLeader->name }}</span>
+                                    </div>
+                                </x-ui.td>
+                                <x-ui.td class="text-muted-foreground">{{ $teamLeader->email }}</x-ui.td>
+                                <x-ui.td>
+                                    <div class="flex flex-wrap gap-1">
+                                        @forelse ($teamLeader->ledTeams as $team)
+                                            <x-ui.badge variant="primary">{{ $team->name }}</x-ui.badge>
+                                        @empty
+                                            <span class="text-muted-foreground">No teams assigned</span>
+                                        @endforelse
+                                    </div>
+                                </x-ui.td>
+                                <x-ui.td>
+                                    <div class="flex items-center justify-end gap-0.5">
+                                        @canvisit(route('admin.organization.team-leaders.show', $teamLeader))
+                                            <x-ui.icon-button icon="eye" label="View team leader" :href="route('admin.organization.team-leaders.show', $teamLeader)" />
+                                        @endcanvisit
+                                        @canvisit(route('admin.organization.team-leaders.edit', $teamLeader))
+                                            <x-ui.icon-button icon="pencil" label="Edit team leader" :href="route('admin.organization.team-leaders.edit', $teamLeader)" />
+                                        @endcanvisit
+                                        @canvisit(route('admin.organization.team-leaders.destroy', $teamLeader), 'DELETE')
+                                            <form action="{{ route('admin.organization.team-leaders.destroy', $teamLeader) }}" method="POST" class="m-0" onsubmit="return confirm('Delete this team leader?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <x-ui.icon-button type="submit" icon="trash-2" label="Delete team leader" tone="destructive" />
+                                            </form>
+                                        @endcanvisit
+                                    </div>
+                                </x-ui.td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No team leaders found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
-        </div>
-        @if ($teamLeaders->hasPages())
-            <div class="card-footer clearfix">
-                {{ $teamLeaders->links() }}
-            </div>
         @endif
-    </div>
-@stop
+
+        @if ($teamLeaders->hasPages())
+            <x-slot:footer>
+                <div class="w-full">{{ $teamLeaders->links() }}</div>
+            </x-slot:footer>
+        @endif
+    </x-ui.card>
+@endsection

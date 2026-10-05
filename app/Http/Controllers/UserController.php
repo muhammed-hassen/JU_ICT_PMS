@@ -15,7 +15,7 @@ class UserController extends Controller
     {
         $search = $request->input('search');
 
-        $users = User::with('role')
+        $users = User::with('roles')
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -54,7 +54,10 @@ class UserController extends Controller
         ]);
 
         $validated['password'] = bcrypt($validated['password']);
-        User::create($validated);
+        $user = User::create($validated);
+
+        // Roles live in Spatie's model_has_roles table; users.role_id was dropped.
+        $user->syncRoles([Role::findOrFail($validated['role_id'])]);
 
         return redirect()->route('users.index')->with('success', 'User created successfully');
     }
@@ -92,7 +95,11 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        $newRole = Role::findOrFail($validated['role_id']);
+        abort_if(! $user->hasRole($newRole) && ! $request->user()->can('assign-role'), 403, 'You cannot change user roles.');
+
         $user->update($validated);
+        $user->syncRoles([$newRole]);
 
         return redirect()->route('users.index')
             ->with('success', 'User updated successfully');

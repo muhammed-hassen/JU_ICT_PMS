@@ -1,280 +1,201 @@
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
-@extends('adminlte::page')
+@extends('layouts.console')
 @section('title', 'My Tasks')
 
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center flex-wrap">
-        <h1>
-            <i class="fas fa-user-check text-info"></i>
-            My Tasks
-        </h1>
-        <div class="mt-2 mt-md-0">
-            <span class="badge bg-primary mr-2">Total: {{ $stats['total'] }}</span>
-            <span class="badge bg-success mr-2">Completed: {{ $stats['completed'] }}</span>
-            <span class="badge bg-warning mr-2">In Progress: {{ $stats['in_progress'] }}</span>
-            <span class="badge bg-danger mr-2">Overdue: {{ $stats['overdue'] }}</span>
-        </div>
-    </div>
+    <x-ui.page-header title="My tasks" :description="$stats['total'] . ' ' . Str::plural('task', $stats['total']) . ' assigned to you.'">
+        <x-ui.button variant="outline" :href="route('admin.tasks.kanban')">
+            <i data-lucide="square-kanban" class="size-4"></i>
+            Board view
+        </x-ui.button>
+    </x-ui.page-header>
 @endsection
 
 @section('content')
-    {{-- Stats Cards --}}
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-info">
-                <div class="inner">
-                    <h3>{{ $stats['not_started'] }}</h3>
-                    <p>Not Started</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-warning">
-                <div class="inner">
-                    <h3>{{ $stats['in_progress'] }}</h3>
-                    <p>In Progress</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-spinner"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-success">
-                <div class="inner">
-                    <h3>{{ $stats['completed'] }}</h3>
-                    <p>Completed</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-danger">
-                <div class="inner">
-                    <h3>{{ $stats['overdue'] }}</h3>
-                    <p>Overdue</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-            </div>
-        </div>
+    <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <x-ui.stat-card label="Not started" :value="$stats['not_started']" icon="circle-dashed" color="neutral" />
+        <x-ui.stat-card label="In progress"  :value="$stats['in_progress']"  icon="loader"          color="blue" />
+        <x-ui.stat-card label="Completed"    :value="$stats['completed']"    icon="circle-check"    color="green" />
+        <x-ui.stat-card label="Overdue"      :value="$stats['overdue']"      icon="triangle-alert"  color="red" />
     </div>
 
-    {{-- Filters --}}
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Your Assigned Tasks</h3>
-            <div class="card-tools">
-                <form method="GET" class="form-inline flex-wrap">
-                    <select name="status" class="form-control form-control-sm mr-2 mb-1">
-                        <option value="">All Statuses</option>
-                        @foreach($statuses as $status)
-                            <option value="{{ $status->id }}" {{ request('status') == $status->id ? 'selected' : '' }}>
-                                {{ $status->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <select name="priority" class="form-control form-control-sm mr-2 mb-1">
-                        <option value="">All Priorities</option>
-                        @foreach($priorities as $priority)
-                            <option value="{{ $priority->id }}" {{ request('priority') == $priority->id ? 'selected' : '' }}>
-                                {{ $priority->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <input type="text" name="search" class="form-control form-control-sm mr-2 mb-1" placeholder="Search..." value="{{ request('search') }}">
-                    <button type="submit" class="btn btn-primary btn-sm mb-1">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <a href="{{ route('admin.tasks.my') }}" class="btn btn-secondary btn-sm ml-1 mb-1">
-                        <i class="fas fa-times"></i>
-                    </a>
-                </form>
+    <x-ui.card class="mt-6" flush>
+        <form method="GET" class="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
+            <h3 class="m-0 mr-auto font-sans text-[15px] font-semibold">Assigned to you</h3>
+            <div class="relative w-full sm:w-56">
+                <label for="my-search" class="sr-only">Search</label>
+                <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"></i>
+                <x-ui.input id="my-search" type="text" name="search" class="pl-9" placeholder="Search tasks" :value="request('search')" />
             </div>
-        </div>
-        <div class="card-body p-0">
-            @if($tasks->isEmpty())
-                <div class="text-center p-5">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <p class="text-muted">No tasks assigned to you!</p>
-                    <p class="text-muted">Enjoy your free time 🎉</p>
-                </div>
-            @else
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>Task</th>
-                                <th>Project</th>
-                                <th>Priority</th>
-                                <th>Status</th>
-                                <th>Progress</th>
-                                <th>Deadline</th>
-                                <th style="min-width: 180px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($tasks as $task)
-                                <tr>
-                                    <td>
-                                        <strong>{{ Str::limit($task->title, 40) }}</strong>
-                                        @if($task->description)
-                                            <br><small class="text-muted">{{ Str::limit($task->description, 40) }}</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {{ $task->phase->project->name ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-{{ $task->priority_color }}">
-                                            {{ $task->priority->name ?? 'None' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-{{ $task->status_color }}">
-                                            {{ $task->status->name ?? 'Unknown' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="height: 20px; width: 70px;">
-                                            <div class="progress-bar bg-{{ $task->progress_percentage == 100 ? 'success' : 'primary' }}"
-                                                 role="progressbar"
-                                                 style="width: {{ $task->progress_percentage }}%">
-                                                {{ $task->progress_percentage }}%
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if($task->deadline)
-                                            @if($task->isOverdue())
-                                                <span class="text-danger">
-                                                    <i class="fas fa-exclamation-circle"></i>
-                                                    {{ $task->deadline->format('M d, Y') }}
-                                                    <br><small>{{ $task->days_overdue }} days overdue</small>
-                                                </span>
-                                            @else
-                                                <span class="text-muted">
-                                                    {{ $task->deadline->format('M d, Y') }}
-                                                    @if($task->days_remaining)
-                                                        <br><small>{{ $task->days_remaining }} days left</small>
-                                                    @endif
-                                                </span>
-                                            @endif
+            <label for="my-status" class="sr-only">Status</label>
+            <x-ui.select id="my-status" name="status" class="w-full sm:w-40">
+                <option value="">All statuses</option>
+                @foreach ($statuses as $status)
+                    <option value="{{ $status->id }}" {{ request('status') == $status->id ? 'selected' : '' }}>{{ $status->name }}</option>
+                @endforeach
+            </x-ui.select>
+            <label for="my-priority" class="sr-only">Priority</label>
+            <x-ui.select id="my-priority" name="priority" class="w-full sm:w-40">
+                <option value="">All priorities</option>
+                @foreach ($priorities as $priority)
+                    <option value="{{ $priority->id }}" {{ request('priority') == $priority->id ? 'selected' : '' }}>{{ $priority->name }}</option>
+                @endforeach
+            </x-ui.select>
+            <x-ui.button type="submit" variant="outline">Apply</x-ui.button>
+            @if (request()->hasAny(['search', 'status', 'priority']))
+                <x-ui.button variant="ghost" :href="route('admin.tasks.my')">Clear</x-ui.button>
+            @endif
+        </form>
+
+        @if ($tasks->isEmpty())
+            <x-ui.empty-state icon="circle-check" title="Nothing assigned to you" description="Tasks assigned to you will show up here." />
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-border bg-muted">
+                        <tr>
+                            <x-ui.th>Task</x-ui.th>
+                            <x-ui.th>Project</x-ui.th>
+                            <x-ui.th>Priority</x-ui.th>
+                            <x-ui.th>Status</x-ui.th>
+                            <x-ui.th class="min-w-40">Progress</x-ui.th>
+                            <x-ui.th>Deadline</x-ui.th>
+                            <x-ui.th class="text-right"><span class="sr-only">Actions</span></x-ui.th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($tasks as $task)
+                            @php
+                                $priorityVariant = ['Critical' => 'destructive', 'High' => 'warning'][$task->priority->name ?? ''] ?? 'neutral';
+
+                                $statusName = $task->status->name ?? '';
+                                if ($task->isOverdue()) {
+                                    $borderColor = '#ef4444';
+                                    $bgColor     = 'rgba(239,68,68,0.08)';
+                                } elseif (in_array($statusName, ['Completed', 'Done'])) {
+                                    $borderColor = '#22c55e';
+                                    $bgColor     = 'rgba(34,197,94,0.07)';
+                                } elseif ($statusName === 'In Progress') {
+                                    $borderColor = '#0067B8';
+                                    $bgColor     = 'rgba(0,103,184,0.07)';
+                                } elseif ($statusName === 'Under Review') {
+                                    $borderColor = '#f59e0b';
+                                    $bgColor     = 'rgba(245,158,11,0.07)';
+                                } elseif ($statusName === 'Blocked') {
+                                    $borderColor = '#f97316';
+                                    $bgColor     = 'rgba(249,115,22,0.08)';
+                                } elseif ($statusName === 'Cancelled') {
+                                    $borderColor = '#9ca3af';
+                                    $bgColor     = 'rgba(156,163,175,0.06)';
+                                } else {
+                                    // Not Started
+                                    $borderColor = '#cbd5e1';
+                                    $bgColor     = 'transparent';
+                                }
+                            @endphp
+                            <tr class="task-row border-b border-border/70 last:border-0 cursor-pointer"
+                                data-href="{{ route('admin.tasks.show', $task) }}"
+                                style="border-left: 5px solid {{ $borderColor }}; background-color: {{ $bgColor }};"
+                                onmouseover="this.style.filter='brightness(0.95)'"
+                                onmouseout="this.style.filter=''">
+                                <x-ui.td class="min-w-56">
+                                    <a href="{{ route('admin.tasks.show', $task) }}" class="font-semibold text-foreground no-underline hover:text-primary hover:no-underline">
+                                        {{ Str::limit($task->title, 40) }}
+                                    </a>
+                                    @include('admin.tasks.partials.subtask-count')
+                                    @if ($task->description)
+                                        <p class="m-0 text-[13px] text-muted-foreground">{{ Str::limit($task->description, 40) }}</p>
+                                    @endif
+                                </x-ui.td>
+                                <x-ui.td class="whitespace-nowrap">{{ $task->phase->project->name ?? 'N/A' }}</x-ui.td>
+                                <x-ui.td><x-ui.badge :variant="$priorityVariant">{{ $task->priority->name ?? 'None' }}</x-ui.badge></x-ui.td>
+                                <x-ui.td><x-ui.badge :variant="$task->status_color">{{ $task->status->name ?? 'Unknown' }}</x-ui.badge></x-ui.td>
+                                <x-ui.td><x-ui.progress :value="$task->progress_percentage" /></x-ui.td>
+                                <x-ui.td class="whitespace-nowrap">
+                                    @if ($task->deadline)
+                                        @if ($task->isOverdue())
+                                            <span class="tabular block font-medium text-destructive">{{ $task->deadline->format('M d, Y') }}</span>
+                                            <span class="block text-xs text-destructive">{{ $task->days_overdue }} days overdue</span>
                                         @else
-                                            <span class="text-muted">No deadline</span>
+                                            <span class="tabular block">{{ $task->deadline->format('M d, Y') }}</span>
+                                            @if ($task->days_remaining)
+                                                <span class="block text-xs text-muted-foreground">{{ $task->days_remaining }} days left</span>
+                                            @endif
                                         @endif
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ route('admin.tasks.show', $task) }}"
-                                               class="btn btn-info"
-                                               title="View Task">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            
-                                            @can('edit-own-task')
-                                                <a href="{{ route('admin.tasks.edit', $task) }}"
-                                                   class="btn btn-warning"
-                                                   title="Edit Task">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            @endcan
-                                            
-                                            @if(auth()->user()->can('complete-task') || auth()->user()->can('edit-task'))
-                                                <form action="{{ route('admin.tasks.update-status', $task) }}"
-                                                      method="POST"
-                                                      class="d-inline">
+                                    @else
+                                        <span class="text-muted-foreground">No deadline</span>
+                                    @endif
+                                </x-ui.td>
+                                <x-ui.td>
+                                    <div class="flex items-center justify-end gap-1">
+                                        {{-- Submit for Review button: shown when task is In Progress at 100% --}}
+                                        @php
+                                            $underReviewStatus = $statuses->firstWhere('name', 'Under Review');
+                                            $canSubmit = $underReviewStatus
+                                                && $statusName === 'In Progress'
+                                                && $task->isAssignedTo(auth()->user())
+                                                && $task->canTransitionTo('Under Review');
+                                        @endphp
+                                        @if ($canSubmit)
+                                            <form action="{{ route('admin.tasks.update-status', $task) }}" method="POST" class="m-0">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="task_status_id" value="{{ $underReviewStatus->id }}">
+                                                <button type="submit"
+                                                        title="Submit this task for review"
+                                                        class="inline-flex items-center gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-[12px] font-semibold text-warning hover:bg-warning/20 transition-colors duration-150"
+                                                        onclick="return confirm('Submit this task for review?')">
+                                                    <i data-lucide="send" class="size-3.5"></i>
+                                                    Submit for review
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        {{-- Status dropdown only for team leaders / directors --}}
+                                        @if (auth()->user()->isTeamLeader())
+                                            @canvisit(route('admin.tasks.update-status', $task), 'PATCH')
+                                                <form action="{{ route('admin.tasks.update-status', $task) }}" method="POST" class="m-0">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <select name="task_status_id" 
-                                                            class="form-control form-control-sm d-inline" 
-                                                            style="width: auto; display: inline-block; height: 32px;"
-                                                            onchange="this.closest('form').submit()">
-                                                        @foreach($statuses as $status)
-                                                            <option value="{{ $status->id }}"
-                                                                    {{ $task->task_status_id == $status->id ? 'selected' : '' }}>
-                                                                {{ $status->name }}
-                                                            </option>
+                                                    <label for="status-{{ $task->id }}" class="sr-only">Change status</label>
+                                                    <x-ui.select id="status-{{ $task->id }}" name="task_status_id" size="sm" class="w-36" onchange="this.closest('form').submit()">
+                                                        @foreach ($task->statusOptionsFor(auth()->user()) as $status)
+                                                            <option value="{{ $status->id }}" {{ $task->task_status_id == $status->id ? 'selected' : '' }}>{{ $status->name }}</option>
                                                         @endforeach
-                                                    </select>
+                                                    </x-ui.select>
                                                 </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </div>
-        
-        {{-- Pagination - FIXED --}}
-        @if($tasks->hasPages())
-            <div class="card-footer clearfix">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div class="text-muted small mb-2 mb-md-0">
-                        Showing {{ $tasks->firstItem() ?? 0 }} to {{ $tasks->lastItem() ?? 0 }} of {{ $tasks->total() }} tasks
-                    </div>
-                    <div class="pagination-wrapper">
-                        {{ $tasks->appends(request()->query())->links() }}
-                    </div>
-                </div>
+                                            @endcanvisit
+                                        @endif
+                                        <x-ui.icon-button icon="eye" label="View task" :href="route('admin.tasks.show', $task)" />
+                                        @canvisit(route('admin.tasks.edit', $task))
+                                            <x-ui.icon-button icon="pencil" label="Edit task" :href="route('admin.tasks.edit', $task)" />
+                                        @endcanvisit
+                                    </div>
+                                </x-ui.td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
-    </div>
+
+        @if ($tasks->hasPages())
+            <x-slot:footer>
+                <div class="w-full">{{ $tasks->appends(request()->query())->links() }}</div>
+            </x-slot:footer>
+        @endif
+    </x-ui.card>
 @endsection
 
-@push('css')
-<style>
-    /* ===== PAGINATION RESPONSIVE FIX ===== */
-    .pagination-wrapper {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        max-width: 100%;
-        padding: 2px 0;
-    }
-    
-    .pagination-wrapper .pagination {
-        flex-wrap: nowrap;
-        margin-bottom: 0;
-    }
-    
-    .pagination-wrapper .pagination .page-item .page-link {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.8rem;
-    }
-    
-    /* Mobile responsive for pagination */
-    @media (max-width: 768px) {
-        .pagination-wrapper .pagination .page-item .page-link {
-            padding: 0.25rem 0.4rem;
-            font-size: 0.7rem;
-        }
-        .pagination-wrapper .pagination .page-item .page-link span {
-            display: none;
-        }
-        .pagination-wrapper .pagination .page-item .page-link i {
-            display: inline-block !important;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .pagination-wrapper .pagination .page-item .page-link {
-            padding: 0.15rem 0.3rem;
-            font-size: 0.65rem;
-        }
-        .pagination-wrapper .pagination .page-item .page-link .d-none.d-sm-block {
-            display: none !important;
-        }
-    }
-</style>
+@push('js')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('tr.task-row').forEach(function (row) {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('a, button, input, select, textarea, form, label')) return;
+                var href = row.dataset.href;
+                if (href) window.location.href = href;
+            });
+        });
+    });
+</script>
 @endpush

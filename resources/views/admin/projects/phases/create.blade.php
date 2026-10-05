@@ -1,181 +1,125 @@
-{{-- resources/views/admin/projects/phases/create.blade.php --}}
-@extends('adminlte::page')
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+@extends('layouts.console')
 
 @section('title', 'Create Phase')
 
 @section('content_header')
-    <h1>
-        <i class="fas fa-plus-circle text-success"></i>
-        Create New Phase
-        <small>for {{ $project->name }}</small>
-    </h1>
+    <x-ui.page-header title="Create New Phase" :description="'for ' . $project->name">
+        @canvisit(route('admin.projects.phases.index', $project))
+            <x-ui.button variant="outline" :href="route('admin.projects.phases.index', $project)">
+                <i data-lucide="arrow-left" class="size-4"></i>
+                Back
+            </x-ui.button>
+        @endcanvisit
+    </x-ui.page-header>
 @endsection
 
 @section('content')
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Phase Details</h3>
-                    <div class="card-tools">
-                        <a href="{{ route('admin.projects.phases.index', $project) }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </a>
+    @php
+        $textarea = 'block w-full rounded-lg border bg-card px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-[3px]';
+        $textareaOk = 'border-input focus:border-ring focus:ring-ring/15';
+        $textareaBad = 'border-destructive focus:border-destructive focus:ring-destructive/15';
+        $label = 'text-[13px] font-normal text-muted-foreground';
+    @endphp
+
+    <div class="grid items-start gap-5 lg:grid-cols-3">
+        <form action="{{ route('admin.projects.phases.store', $project) }}" method="POST" class="lg:col-span-2">
+            @csrf
+            <x-ui.card title="Phase Details">
+                <div class="space-y-5">
+                    <div>
+                        <x-ui.label for="name">Phase Name <span class="text-destructive">*</span></x-ui.label>
+                        <x-ui.input type="text" name="name" id="name" placeholder="Enter phase name (e.g., Planning, Development)" :value="old('name')" :invalid="$errors->has('name')" required />
+                        @error('name')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <x-ui.label for="description">Description</x-ui.label>
+                        <textarea name="description" id="description" rows="4" placeholder="Describe the phase objectives and scope"
+                                  class="{{ $textarea }} {{ $errors->has('description') ? $textareaBad : $textareaOk }}">{{ old('description') }}</textarea>
+                        @error('description')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-ui.label for="phase_status_id">Status <span class="text-destructive">*</span></x-ui.label>
+                            <x-ui.select name="phase_status_id" id="phase_status_id" :invalid="$errors->has('phase_status_id')" required>
+                                <option value="">Select Status</option>
+                                @foreach ($statuses as $status)
+                                    <option value="{{ $status->id }}" {{ old('phase_status_id', $phase->phase_status_id ?? '') == $status->id ? 'selected' : '' }}>{{ $status->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            @error('phase_status_id')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <x-ui.label for="sort_order">Sort Order</x-ui.label>
+                            <x-ui.input type="number" name="sort_order" id="sort_order" min="1" :value="old('sort_order', $maxOrder)" :invalid="$errors->has('sort_order')" />
+                            <p class="m-0 mt-1 text-[13px] text-muted-foreground">Leave empty to add at the end</p>
+                            @error('sort_order')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-ui.label for="start_date">Planned Start Date</x-ui.label>
+                            <x-ui.input type="date" name="start_date" id="start_date" :value="old('start_date')" :invalid="$errors->has('start_date')" />
+                            @error('start_date')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <x-ui.label for="end_date">Planned End Date</x-ui.label>
+                            <x-ui.input type="date" name="end_date" id="end_date" :value="old('end_date')" :invalid="$errors->has('end_date')" />
+                            @error('end_date')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                        </div>
                     </div>
                 </div>
-                <form action="{{ route('admin.projects.phases.store', $project) }}" method="POST">
-                    @csrf
-                    <div class="card-body">
-                        {{-- Name --}}
-                        <div class="form-group">
-                            <label for="name">Phase Name <span class="text-danger">*</span></label>
-                            <input type="text"
-                                   name="name"
-                                   id="name"
-                                   class="form-control @error('name') is-invalid @enderror"
-                                   placeholder="Enter phase name (e.g., Planning, Development)"
-                                   value="{{ old('name') }}"
-                                   required>
-                            @error('name')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
 
-                        {{-- Description --}}
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea name="description"
-                                      id="description"
-                                      class="form-control @error('description') is-invalid @enderror"
-                                      rows="4"
-                                      placeholder="Describe the phase objectives and scope">{{ old('description') }}</textarea>
-                            @error('description')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        {{-- Status and Order --}}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="phase_status_id">Status <span class="text-danger">*</span></label>
-                                    <select name="phase_status_id"
-                                            id="phase_status_id"
-                                            class="form-control @error('phase_status_id') is-invalid @enderror"
-                                            required>
-                                        <option value="">Select Status</option>
-                                        @foreach($statuses as $status)
-                                            <option value="{{ $status->id }}"
-                                                    {{ old('phase_status_id', $phase->phase_status_id ?? '') == $status->id ? 'selected' : '' }}>
-                                                {{ $status->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('phase_status_id')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="sort_order">Sort Order</label>
-                                    <input type="number"
-                                           name="sort_order"
-                                           id="sort_order"
-                                           class="form-control @error('sort_order') is-invalid @enderror"
-                                           value="{{ old('sort_order', $maxOrder) }}"
-                                           min="1">
-                                    <small class="text-muted">Leave empty to add at the end</small>
-                                    @error('sort_order')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Dates --}}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="start_date">Planned Start Date</label>
-                                    <input type="date"
-                                           name="start_date"
-                                           id="start_date"
-                                           class="form-control @error('start_date') is-invalid @enderror"
-                                           value="{{ old('start_date') }}">
-                                    @error('start_date')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="end_date">Planned End Date</label>
-                                    <input type="date"
-                                           name="end_date"
-                                           id="end_date"
-                                           class="form-control @error('end_date') is-invalid @enderror"
-                                           value="{{ old('end_date') }}">
-                                    @error('end_date')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
+                <x-slot:footer>
+                    <div class="flex w-full justify-end gap-2">
+                        @canvisit(route('admin.projects.phases.index', $project))
+                            <x-ui.button variant="outline" :href="route('admin.projects.phases.index', $project)">Cancel</x-ui.button>
+                        @endcanvisit
+                        <x-ui.button type="submit">
+                            <i data-lucide="save" class="size-4"></i>
+                            Create Phase
+                        </x-ui.button>
                     </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Create Phase
-                        </button>
-                        <a href="{{ route('admin.projects.phases.index', $project) }}" class="btn btn-secondary">
-                            Cancel
-                        </a>
+                </x-slot:footer>
+            </x-ui.card>
+        </form>
+
+        <div class="space-y-5">
+            <x-ui.card title="Project Info">
+                <dl class="m-0 divide-y divide-border">
+                    <div class="flex items-center justify-between gap-4 py-2.5 first:pt-0">
+                        <dt class="{{ $label }}">Project Name</dt>
+                        <dd class="m-0 text-right font-medium">{{ $project->name }}</dd>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        {{-- Sidebar Info --}}
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Project Info</h3>
-                </div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-5">Project Name</dt>
-                        <dd class="col-sm-7">{{ $project->name }}</dd>
-
-                        <dt class="col-sm-5">Total Phases</dt>
-                        <dd class="col-sm-7">{{ $project->phases->count() }}</dd>
-
-                        <dt class="col-sm-5">Created By</dt>
-                        <dd class="col-sm-7">{{ $project->creator?->name ?? 'N/A' }}</dd>
-
-                        <dt class="col-sm-5">Status</dt>
-                        <dd class="col-sm-7">
-                            <span class="badge badge-{{ $project->status === 'active' ? 'success' : 'secondary' }}">
-                                {{ ucfirst($project->status ?? 'Draft') }}
-                            </span>
+                    <div class="flex items-center justify-between py-2.5">
+                        <dt class="{{ $label }}">Total Phases</dt>
+                        <dd class="tabular m-0 font-semibold">{{ $project->phases->count() }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 py-2.5">
+                        <dt class="{{ $label }}">Created By</dt>
+                        <dd class="m-0 text-right">{{ $project->creator?->name ?? 'N/A' }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between py-2.5 last:pb-0">
+                        <dt class="{{ $label }}">Status</dt>
+                        <dd class="m-0">
+                            <x-ui.badge :variant="$project->status === 'active' ? 'success' : 'neutral'">{{ ucfirst($project->status ?? 'Draft') }}</x-ui.badge>
                         </dd>
-                    </dl>
-                </div>
-            </div>
+                    </div>
+                </dl>
+            </x-ui.card>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Tips</h3>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-check-circle text-success"></i> Each phase can have multiple tasks</li>
-                        <li><i class="fas fa-check-circle text-success"></i> Phases can be reordered</li>
-                        <li><i class="fas fa-check-circle text-success"></i> Progress is automatically calculated</li>
-                        <li><i class="fas fa-check-circle text-success"></i> You can assign status to each phase</li>
-                    </ul>
-                </div>
-            </div>
+            <x-ui.card title="Tips">
+                <ul class="m-0 list-none space-y-2.5 p-0 text-sm">
+                    @foreach (['Each phase can have multiple tasks', 'Phases can be reordered', 'Progress is automatically calculated', 'You can assign status to each phase'] as $tip)
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="circle-check" class="mt-0.5 size-4 shrink-0 text-muted-foreground"></i>
+                            <span>{{ $tip }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-ui.card>
         </div>
     </div>
 @endsection

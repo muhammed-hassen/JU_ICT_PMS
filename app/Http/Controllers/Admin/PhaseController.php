@@ -9,9 +9,11 @@ use App\Models\Project;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PhaseController extends Controller
 {
@@ -72,9 +74,16 @@ class PhaseController extends Controller
         // Get all projects the user can see
         $projects = $user->getVisibleProjects();
 
+        // Work goes Project, then Phase, then Task: no project, no phase.
         if ($projects->isEmpty()) {
-            return redirect()->route('admin.phases.index')
-                ->with('error', 'You need to have at least one project to create a phase.');
+            return view('admin.needs-first', [
+                'title' => 'Create Phase',
+                'icon' => 'folder-kanban',
+                'heading' => 'Create a project first',
+                'message' => 'A phase belongs to a project, and you have no projects yet. Create the project, then add its phases.',
+                'actionLabel' => 'Create project',
+                'actionRoute' => route('admin.projects.create'),
+            ]);
         }
 
         $statuses = PhaseStatus::all();
@@ -114,13 +123,13 @@ class PhaseController extends Controller
         }
 
         $project = Project::find($validated['project_id']);
-        $maxOrder = $project->phases()->max('sort_order') ?? 0;
+        $validated['sort_order'] = $this->freeSortOrder($project, $validated['sort_order'] ?? null);
 
         $phase = $project->phases()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'phase_status_id' => $validated['phase_status_id'],
-            'sort_order' => $validated['sort_order'] ?? $maxOrder + 1,
+            'sort_order' => $validated['sort_order'],
             'start_date' => $validated['start_date'] ?? null,
             'end_date' => $validated['end_date'] ?? null,
             'progress_percentage' => 0,
@@ -202,7 +211,7 @@ class PhaseController extends Controller
         }
 
         $statuses = PhaseStatus::all();
-        $maxOrder = $project->phases()->max('sort_order') ?? 0;
+        $maxOrder = $project->phases()->withTrashed()->max('sort_order') ?? 0;
 
         return view('admin.projects.phases.create', [
             'project' => $project,
@@ -236,13 +245,13 @@ class PhaseController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $maxOrder = $project->phases()->max('sort_order') ?? 0;
+        $validated['sort_order'] = $this->freeSortOrder($project, $validated['sort_order'] ?? null);
 
         $phase = $project->phases()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'phase_status_id' => $validated['phase_status_id'],
-            'sort_order' => $validated['sort_order'] ?? $maxOrder + 1,
+            'sort_order' => $validated['sort_order'],
             'start_date' => $validated['start_date'] ?? null,
             'end_date' => $validated['end_date'] ?? null,
             'progress_percentage' => 0,
@@ -299,6 +308,7 @@ class PhaseController extends Controller
             'tasks.assignee',
             'tasks.creator',
             'creator',
+            'milestones',
         ]);
 
         if (! $user->isDirector()) {
@@ -331,7 +341,7 @@ class PhaseController extends Controller
         $statuses = PhaseStatus::all();
         $project = $phase->project;
 
-        return view('admin.projects.phases.edit', [
+        return view('admin.phases.edit', [
             'phase' => $phase,
             'project' => $project,
             'statuses' => $statuses,
@@ -434,7 +444,7 @@ class PhaseController extends Controller
      * Reorder phases (drag and drop) - Nested
      * URL: /admin/projects/{project}/phases/reorder (POST)
      */
-    public function reorder(Request $request, Project $project): RedirectResponse
+    public function reorder(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $user = auth()->user();
 
@@ -465,6 +475,11 @@ class PhaseController extends Controller
                 ['new_order' => $validated['phases']]
             );
         });
+
+        // The drag-to-reorder script posts with fetch and expects JSON back.
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()
             ->route('admin.projects.phases.index', $project)
@@ -613,5 +628,25 @@ class PhaseController extends Controller
         return redirect()
             ->route('admin.projects.show', $project)
             ->with('success', 'Project progress updated successfully.');
+    }
+
+    /**
+     * The position a new phase takes. Deleted phases keep their slot until they
+     * are removed for good (the database allows one phase per position), so
+     * they count too. A position already taken is a form error, not a crash.
+     */
+    private function freeSortOrder(Project $project, ?int $requested): int
+    {
+        if ($requested === null) {
+            return ($project->phases()->withTrashed()->max('sort_order') ?? 0) + 1;
+        }
+
+        if ($project->phases()->withTrashed()->where('sort_order', $requested)->exists()) {
+            throw ValidationException::withMessages([
+                'sort_order' => "Position {$requested} is already taken in this project. Leave it empty to add the phase at the end.",
+            ]);
+        }
+
+        return $requested;
     }
 }

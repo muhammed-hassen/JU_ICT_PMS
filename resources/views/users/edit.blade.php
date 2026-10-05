@@ -1,108 +1,58 @@
-@extends('adminlte::page')
+@extends('layouts.console')
 
 @section('title', 'Edit User')
 
 @section('content_header')
-    <h1>Edit User</h1>
+    <x-ui.page-header title="Edit User" :description="'Update the account for ' . $user->name . '.'" />
 @stop
-
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
 
 @section('content')
+    <form method="POST" action="{{ route('users.update', $user->id) }}">
+        @csrf
+        @method('PUT')
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-
-        <div class="card card-primary">
-            <div class="card-header">
-                <h3 class="card-title">Update User</h3>
+        <x-ui.card class="max-w-3xl" title="Update User" description="Leave the password empty to keep the current one.">
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <x-ui.label for="name">Name <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.input type="text" name="name" id="name" :value="old('name', $user->name)" :invalid="$errors->has('name')" />
+                    @error('name')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <x-ui.label for="email">Email <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.input type="email" name="email" id="email" :value="old('email', $user->email)" :invalid="$errors->has('email')" />
+                    @error('email')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <x-ui.label for="password">Password (leave empty if not changing)</x-ui.label>
+                    <x-ui.input type="password" name="password" id="password" autocomplete="new-password" :invalid="$errors->has('password')" />
+                    @error('password')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <x-ui.label for="role_id">Role <span class="text-destructive">*</span></x-ui.label>
+                    <x-ui.select name="role_id" id="role_id" :invalid="$errors->has('role_id')">
+                        @foreach ($roles as $role)
+                            <option value="{{ $role->id }}"
+                                {{ old('role_id', $user->roles->first()?->id) == $role->id ? 'selected' : '' }}>
+                                {{ $role->name }}
+                            </option>
+                        @endforeach
+                    </x-ui.select>
+                    @error('role_id')<p class="m-0 mt-1 text-[13px] text-destructive">{{ $message }}</p>@enderror
+                </div>
             </div>
 
-            <form method="POST" action="{{ route('users.update', $user->id) }}">
-                @csrf
-                @method('PUT')
-
-                <div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card-body">
-                    {{-- Name --}}
-                    <div class="form-group">
-                        <label>Name</label>
-                        <input type="text" name="name"
-                               value="{{ old('name', $user->name) }}"
-                               class="form-control @error('name') is-invalid @enderror">
-
-                        @error('name')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Email --}}
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email"
-                               value="{{ old('email', $user->email) }}"
-                               class="form-control @error('email') is-invalid @enderror">
-
-                        @error('email')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Password --}}
-                    <div class="form-group">
-                        <label>Password (leave empty if not changing)</label>
-                        <input type="password" name="password"
-                               class="form-control @error('password') is-invalid @enderror">
-
-                        @error('password')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Role --}}
-                    <div class="form-group">
-                        <label>Role</label>
-                        <select name="role_id" class="form-control">
-                            @foreach($roles as $role)
-                                <option value="{{ $role->id }}"
-                                    {{ $user->role_id == $role->id ? 'selected' : '' }}>
-                                    {{ $role->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                </div>
-
-                <div class="card-footer">
-                    <button class="btn btn-primary">
+            <x-slot:footer>
+                <div class="flex w-full justify-end gap-2">
+                    @canvisit(route('users.index'))
+                        <x-ui.button variant="outline" :href="route('users.index')">Cancel</x-ui.button>
+                    @endcanvisit
+                    <x-ui.button type="submit">
+                        <i data-lucide="save" class="size-4"></i>
                         Update User
-                    </button>
-
-                    <a href="{{ route('users.index') }}" class="btn btn-secondary">
-                        Cancel
-                    </a>
+                    </x-ui.button>
                 </div>
-
-            </form>
-
-        </div>
-        </div>
-    </div>
-</div>
-    </div>
-</div>
-
+            </x-slot:footer>
+        </x-ui.card>
+    </form>
 @stop
-<script>
-    setTimeout(function () {
-        let alert = document.querySelector('.alert');
-        if (alert) {
-            alert.style.transition = "0.5s";
-            alert.style.opacity = 0;
-
-            setTimeout(() => alert.remove(), 500);
-        }
-    }, 2000); // disappears after  2 seconds
-</script>

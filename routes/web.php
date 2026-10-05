@@ -3,11 +3,18 @@
 use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PhaseController;
+use App\Http\Controllers\Admin\PhaseDashboardController;
+use App\Http\Controllers\Admin\PhaseMilestoneController;
+use App\Http\Controllers\Admin\ProjectAnalyticsController;
 use App\Http\Controllers\Admin\ProjectController;
+use App\Http\Controllers\Admin\ProjectFileController;
 use App\Http\Controllers\Admin\ProjectTemplateController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SubtaskController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Organization\DirectorController;
 use App\Http\Controllers\Organization\MemberController;
 use App\Http\Controllers\Organization\TeamController;
@@ -35,18 +42,106 @@ Auth::routes(['register' => false]);
 // ========== HOME ==========
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
+// ========== NOTIFICATIONS ==========
+// Each person only ever reads their own, so no extra permission gate.
+Route::middleware('auth')->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::post('read-all', [NotificationController::class, 'readAll'])->name('read-all');
+    Route::get('{id}', [NotificationController::class, 'open'])->name('open');
+});
+
+// ========== MESSAGES ==========
+// Participant checks live in MessageController; nobody reads a conversation they are not in.
+Route::middleware('auth')->prefix('messages')->name('messages.')->controller(MessageController::class)->group(function () {
+    Route::get('/', 'index')->name('index')->middleware('permission:view-own-conversations');
+    Route::get('new', 'create')->name('create')->middleware('permission:create-conversation');
+    Route::post('/', 'store')->name('store')->middleware('permission:create-conversation');
+    Route::get('{conversation}', 'show')->name('show')->middleware('permission:view-own-conversations');
+    Route::post('{conversation}/reply', 'reply')->name('reply')->middleware('permission:send-message');
+    Route::get('{conversation}/poll', 'poll')->name('poll')->middleware('permission:view-own-conversations');
+    Route::patch('message/{message}', 'update')->name('update')->middleware('permission:edit-own-message');
+    Route::delete('message/{message}', 'destroy')->name('destroy')->middleware('permission:delete-own-message|delete-any-message');
+});
+
+// Old bookmarks: work pages used to live under /admin.
+Route::get('admin/{path}', fn (string $path) => redirect('/'.$path.(request()->getQueryString() ? '?'.request()->getQueryString() : ''), 301))
+    ->where('path', '(projects|phases|phase-dashboard|tasks|templates|analytics)(/.*)?');
+
 // ========== USER CRUD ==========
-Route::middleware(['auth'])->group(function () {
+// User management is for the Director and System Administrator. Without these
+// gates any signed-in user (and Team Leaders, who hold access-admin) could
+// create or delete accounts by typing the URL.
+Route::middleware(['auth', 'permission:access-admin', 'permission:view-all-users'])->group(function () {
     Route::resource('users', UserController::class);
 });
 
 // ============================================================
 // ========== ROUTES ACCESSIBLE TO ALL AUTHENTICATED USERS ==========
 // ============================================================
+// Everyday work pages (projects, phases, tasks) live at the root, so Team
+// Members never see /admin in their address bar. Only the real admin pages
+// (organization, roles, permissions, activity log) keep the /admin prefix.
+// Route names keep the admin. prefix so every route() call still works.
 Route::middleware(['auth'])
-    ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+
+        // ====== SUBTASKS (task checklist) ======
+        // Finer checks (editor vs. assignee) live in SubtaskController.
+        Route::post('tasks/{task}/subtasks', [SubtaskController::class, 'store'])
+            ->name('tasks.subtasks.store')
+            ->middleware('permission:edit-task');
+        Route::patch('subtasks/{subtask}/toggle', [SubtaskController::class, 'toggle'])
+            ->name('subtasks.toggle')
+            ->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress');
+        Route::delete('subtasks/{subtask}', [SubtaskController::class, 'destroy'])
+            ->name('subtasks.destroy')
+            ->middleware('permission:edit-task');
+
+        // ====== PHASE MILESTONES ======
+        // Project visibility is checked in PhaseMilestoneController.
+        Route::post('phases/{phase}/milestones', [PhaseMilestoneController::class, 'store'])
+            ->name('phases.milestones.store')
+            ->middleware('permission:edit-phase');
+        Route::patch('milestones/{milestone}/toggle', [PhaseMilestoneController::class, 'toggle'])
+            ->name('milestones.toggle')
+            ->middleware('permission:edit-phase');
+        Route::delete('milestones/{milestone}', [PhaseMilestoneController::class, 'destroy'])
+            ->name('milestones.destroy')
+            ->middleware('permission:edit-phase');
+
+        // ====== PROJECT FILES ======
+        // Project visibility and own-vs-any delete are checked in ProjectFileController.
+        Route::post('projects/{project}/files', [ProjectFileController::class, 'store'])
+            ->name('projects.files.store')
+            ->middleware('permission:upload-project-files');
+        Route::get('files/{file}/download', [ProjectFileController::class, 'download'])
+            ->name('files.download')
+            ->middleware('permission:download-files');
+        Route::delete('files/{file}', [ProjectFileController::class, 'destroy'])
+            ->name('files.destroy')
+            ->middleware('permission:delete-own-files|delete-any-files');
+
+        // ====== REPORTS ======
+        // These controllers and views existed but no route reached them.
+        Route::get('analytics', [ProjectAnalyticsController::class, 'index'])
+            ->name('analytics.index')
+            ->middleware('permission:view-reports');
+        Route::get('analytics/export', [ProjectAnalyticsController::class, 'export'])
+            ->name('analytics.export')
+            ->middleware('permission:export-reports');
+        Route::get('analytics/export/pdf', [ProjectAnalyticsController::class, 'exportPdf'])
+            ->name('analytics.export.pdf')
+            ->middleware('permission:export-reports');
+        Route::get('analytics/export/excel', [ProjectAnalyticsController::class, 'exportExcel'])
+            ->name('analytics.export.excel')
+            ->middleware('permission:export-reports');
+        Route::get('phase-dashboard', [PhaseDashboardController::class, 'index'])
+            ->name('phases.dashboard')
+            ->middleware('permission:view-phases');
+        Route::get('phase-dashboard/stats', [PhaseDashboardController::class, 'stats'])
+            ->name('phases.dashboard.stats')
+            ->middleware('permission:view-phases');
 
         // ====== MY TASKS ======
         Route::get('tasks/my', [TaskController::class, 'myTasks'])->name('tasks.my');
@@ -54,6 +149,10 @@ Route::middleware(['auth'])
         // ====== PROJECTS ======
         Route::get('projects', [ProjectController::class, 'index'])
             ->name('projects.index')
+            ->middleware('permission:view-projects');
+
+        Route::get('projects/search', [ProjectController::class, 'search'])
+            ->name('projects.search')
             ->middleware('permission:view-projects');
 
         Route::get('projects/create', [ProjectController::class, 'create'])
@@ -67,6 +166,11 @@ Route::middleware(['auth'])
         Route::get('projects/{project}', [ProjectController::class, 'show'])
             ->name('projects.show')
             ->middleware('permission:view-project-details');
+
+        // Closing is the last workflow step; ProjectController::close checks owner or Director.
+        Route::post('projects/{project}/close', [ProjectController::class, 'close'])
+            ->name('projects.close')
+            ->middleware('permission:edit-project|change-project-status');
 
         // ====== PHASES ======
         Route::get('phases', [PhaseController::class, 'index'])
@@ -100,15 +204,19 @@ Route::middleware(['auth'])
         // ====== TASKS ======
         Route::get('tasks', [TaskController::class, 'index'])
             ->name('tasks.index')
-            ->middleware('permission:view-tasks');
+            ->middleware('permission:view-team-tasks|view-all-tasks');
+
+        Route::get('tasks/create', [TaskController::class, 'choosePhase'])
+            ->name('tasks.create')
+            ->middleware('permission:create-task');
 
         Route::get('tasks/kanban', [TaskController::class, 'kanban'])
             ->name('tasks.kanban')
-            ->middleware('permission:view-tasks');
+            ->middleware('permission:view-team-tasks|view-all-tasks');
 
         Route::post('tasks/kanban/reorder', [TaskController::class, 'kanbanReorder'])
             ->name('tasks.kanban-reorder')
-            ->middleware('permission:edit-task');
+            ->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress');
 
         Route::get('tasks/{task}', [TaskController::class, 'show'])
             ->name('tasks.show')
@@ -140,15 +248,15 @@ Route::middleware(['auth'])
 
         Route::post('tasks/{task}/transition', [TaskController::class, 'transition'])
             ->name('tasks.transition')
-            ->middleware('permission:edit-task');
+            ->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress');
 
         Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])
             ->name('tasks.update-status')
-            ->middleware('permission:edit-task');
+            ->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress');
 
         Route::patch('tasks/{task}/progress', [TaskController::class, 'updateProgress'])
             ->name('tasks.update-progress')
-            ->middleware('permission:edit-task');
+            ->middleware('permission:edit-task|edit-own-task|complete-task|update-task-progress');
 
         Route::post('tasks/{task}/restore', [TaskController::class, 'restore'])
             ->name('tasks.restore')
@@ -192,20 +300,20 @@ Route::middleware(['auth'])
 // ========== ADMIN ONLY ROUTES - Requires access-admin ==========
 // ============================================================
 Route::middleware(['auth', 'permission:access-admin'])
-    ->prefix('admin')
     ->name('admin.')
     ->group(function () {
 
-        // ====== POSTS (Example) ======
-        Route::get('posts', function () {
-            return view('posts');
-        })->name('posts.index');
-
         // ====== ROLES & PERMISSIONS ======
-        Route::resource('roles', RoleController::class);
+        // Roles are managed by the Director and System Administrator only, the
+        // same people who manage permissions. access-admin alone let Team
+        // Leaders in.
+        Route::prefix('admin')->group(function () {
+            Route::resource('roles', RoleController::class)
+                ->middleware('permission:configure-system');
 
-        Route::resource('permissions', PermissionController::class)
-            ->middleware('permission:configure-system');
+            Route::resource('permissions', PermissionController::class)
+                ->middleware('permission:configure-system');
+        });
 
         // ====== TEMPLATES - CREATE, EDIT, DELETE ======
         Route::get('templates/create', [ProjectTemplateController::class, 'create'])
@@ -231,11 +339,11 @@ Route::middleware(['auth', 'permission:access-admin'])
         // ====== PROJECTS - EDIT, DELETE ======
         Route::get('projects/{project}/edit', [ProjectController::class, 'edit'])
             ->name('projects.edit')
-            ->middleware('permission:edit-project');
+            ->middleware('permission:edit-project|edit-own-project');
 
         Route::put('projects/{project}', [ProjectController::class, 'update'])
             ->name('projects.update')
-            ->middleware('permission:edit-project');
+            ->middleware('permission:edit-project|edit-own-project');
 
         Route::delete('projects/{project}', [ProjectController::class, 'destroy'])
             ->name('projects.destroy')
@@ -273,9 +381,14 @@ Route::middleware(['auth', 'permission:access-admin'])
         // ============================================================
         // ====== ORGANIZATION - FULL CRUD (Admin Only) ======
         // ============================================================
-        Route::prefix('organization')
+        Route::prefix('admin/organization')
             ->name('organization.')
             ->group(function () {
+
+                // ===== ORG CHART (SRS 5.2) =====
+                Route::get('chart', [TeamController::class, 'chart'])
+                    ->name('chart')
+                    ->middleware('permission:view-organization-structure');
 
                 // ===== TEAMS =====
                 Route::get('teams', [TeamController::class, 'index'])
@@ -395,19 +508,21 @@ Route::middleware(['auth', 'permission:access-admin'])
             });
 
         // ====== ACTIVITY LOG ======
-        Route::get('activity', [ActivityController::class, 'index'])
-            ->name('activity.index')
-            ->middleware('permission:view-audit-logs');
+        Route::prefix('admin')->group(function () {
+            Route::get('activity', [ActivityController::class, 'index'])
+                ->name('activity.index')
+                ->middleware('permission:view-audit-logs');
 
-        Route::get('activity/user/{user}', [ActivityController::class, 'user'])
-            ->name('activity.user')
-            ->middleware('permission:view-audit-logs');
+            Route::get('activity/user/{user}', [ActivityController::class, 'user'])
+                ->name('activity.user')
+                ->middleware('permission:view-audit-logs');
 
-        Route::get('activity/project/{project}', [ActivityController::class, 'project'])
-            ->name('activity.project')
-            ->middleware('permission:view-audit-logs');
+            Route::get('activity/project/{project}', [ActivityController::class, 'project'])
+                ->name('activity.project')
+                ->middleware('permission:view-audit-logs');
 
-        Route::get('activity/task/{task}', [ActivityController::class, 'task'])
-            ->name('activity.task')
-            ->middleware('permission:view-audit-logs');
+            Route::get('activity/task/{task}', [ActivityController::class, 'task'])
+                ->name('activity.task')
+                ->middleware('permission:view-audit-logs');
+        });
     });

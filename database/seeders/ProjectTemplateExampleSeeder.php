@@ -21,7 +21,7 @@ class ProjectTemplateExampleSeeder extends Seeder
         }
 
         if (! $systemAdmin) {
-            $this->command->error('No user found to create templates!');
+            $this->command?->error('No user found to create templates!');
 
             return;
         }
@@ -31,6 +31,56 @@ class ProjectTemplateExampleSeeder extends Seeder
         $lowPriorityId = TaskPriority::query()->where('name', 'Low')->value('id');
 
         $templateDefinitions = [
+            [
+                // The five lifecycle phases named in the SRS (section 2.2 and 5.5).
+                'name' => 'Standard ICT Project Lifecycle',
+                'description' => 'The directorate lifecycle: Initiation, Planning, Execution, Monitoring and Closure. Fits any ICT project.',
+                'is_active' => true,
+                'phases' => [
+                    [
+                        'name' => 'Initiation',
+                        'description' => 'Agree why the project exists and who it serves.',
+                        'tasks' => [
+                            ['title' => 'Write the project charter', 'description' => 'State the goal, objectives, sponsor and rough budget.', 'estimated_hours' => 4, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Identify stakeholders', 'description' => 'List who is affected, who approves and how to reach them.', 'estimated_hours' => 2, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Planning',
+                        'description' => 'Turn the charter into a schedule, budget and resource plan.',
+                        'tasks' => [
+                            ['title' => 'Define scope and deliverables', 'description' => 'Write down what will be delivered and what is out of scope.', 'estimated_hours' => 4, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Prepare schedule and milestones', 'description' => 'Set target dates for each phase and its milestones.', 'estimated_hours' => 3, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Estimate budget and resources', 'description' => 'Estimate cost, people and equipment per task.', 'estimated_hours' => 3, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Execution',
+                        'description' => 'Do the work the plan describes.',
+                        'tasks' => [
+                            ['title' => 'Set up the environment', 'description' => 'Prepare servers, accounts and tools the team needs.', 'estimated_hours' => 6, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Build or configure the solution', 'description' => 'Carry out the main technical work.', 'estimated_hours' => 24, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Train users', 'description' => 'Show the people who will use the result how it works.', 'estimated_hours' => 4, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Monitoring',
+                        'description' => 'Check progress, cost and quality against the plan.',
+                        'tasks' => [
+                            ['title' => 'Review progress against the schedule', 'description' => 'Compare planned and actual dates and act on slippage.', 'estimated_hours' => 2, 'task_priority_id' => $mediumPriorityId],
+                            ['title' => 'Test and accept deliverables', 'description' => 'Confirm each deliverable meets its acceptance criteria.', 'estimated_hours' => 6, 'task_priority_id' => $highPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Closure',
+                        'description' => 'Hand over, record lessons and close the project.',
+                        'tasks' => [
+                            ['title' => 'Hand over to operations', 'description' => 'Pass documentation and support duties to the owning team.', 'estimated_hours' => 3, 'task_priority_id' => $mediumPriorityId],
+                            ['title' => 'Write the closure report', 'description' => 'Summarise results, final cost and lessons learned.', 'estimated_hours' => 3, 'task_priority_id' => $lowPriorityId],
+                        ],
+                    ],
+                ],
+            ],
             [
                 'name' => 'Full-Stack Web Application',
                 'description' => 'A delivery template for building, testing, and launching a web application with frontend, backend, and deployment work.',
@@ -84,6 +134,147 @@ class ProjectTemplateExampleSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'name' => 'Mobile Application',
+                'description' => 'A delivery template for designing, building and releasing a mobile app for Android and iOS.',
+                'is_active' => true,
+                'phases' => [
+                    [
+                        'name' => 'Discovery & Planning',
+                        'description' => 'Agree what the app must do, for whom, and how success is measured.',
+                        'tasks' => [
+                            ['title' => 'Define product requirements and success metrics', 'description' => 'List the core user journeys, target devices and measurable goals.', 'estimated_hours' => 5, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Choose platforms and technology', 'description' => 'Decide on native or cross-platform tooling and minimum OS versions.', 'estimated_hours' => 3, 'task_priority_id' => $mediumPriorityId],
+                            ['title' => 'Plan release milestones', 'description' => 'Set dates for design sign-off, beta and store release.', 'estimated_hours' => 2, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'UX & Interface Design',
+                        'description' => 'Design the screens and flows before development starts.',
+                        'tasks' => [
+                            ['title' => 'Design user flows and wireframes', 'description' => 'Sketch every main screen and how users move between them.', 'estimated_hours' => 8, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Produce the visual design', 'description' => 'Apply branding, typography and components to the wireframes.', 'estimated_hours' => 8, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Mobile Development',
+                        'description' => 'Build the app screens and device features.',
+                        'tasks' => [
+                            ['title' => 'Build mobile screens and navigation flows', 'description' => 'Implement the designed screens, navigation and form validation.', 'estimated_hours' => 20, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Implement device capabilities and local storage', 'description' => 'Add camera, location, notifications and offline storage as required.', 'estimated_hours' => 12, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Backend Integration',
+                        'description' => 'Connect the app to the server and handle authentication.',
+                        'tasks' => [
+                            ['title' => 'Integrate the app with backend APIs', 'description' => 'Connect screens to the server endpoints and handle errors and loading states.', 'estimated_hours' => 12, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Implement sign-in and session handling', 'description' => 'Add login, token storage and logout.', 'estimated_hours' => 6, 'task_priority_id' => $highPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Testing & Release',
+                        'description' => 'Test on real devices and publish to the app stores.',
+                        'tasks' => [
+                            ['title' => 'Test on target devices', 'description' => 'Run the main flows on a range of phones and screen sizes.', 'estimated_hours' => 8, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Prepare store release assets and submission checklist', 'description' => 'Prepare icons, screenshots, descriptions and store listings.', 'estimated_hours' => 4, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'Desktop Application',
+                'description' => 'A delivery template for an installable desktop application used inside the university.',
+                'is_active' => true,
+                'phases' => [
+                    [
+                        'name' => 'Requirements & Planning',
+                        'description' => 'Agree the workflows the application must support.',
+                        'tasks' => [
+                            ['title' => 'Gather workflow requirements from users', 'description' => 'Interview the staff who will use the application.', 'estimated_hours' => 6, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Define supported operating systems', 'description' => 'List target Windows, macOS or Linux versions.', 'estimated_hours' => 2, 'task_priority_id' => $lowPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Desktop Development',
+                        'description' => 'Build the application windows, workflows and storage.',
+                        'tasks' => [
+                            ['title' => 'Build the main application windows', 'description' => 'Implement the main window, menus and dialogs.', 'estimated_hours' => 16, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Implement desktop workflows and local persistence', 'description' => 'Implement the core workflows and save data locally.', 'estimated_hours' => 16, 'task_priority_id' => $highPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Packaging & Deployment',
+                        'description' => 'Package the application and roll it out to user machines.',
+                        'tasks' => [
+                            ['title' => 'Create the installer package', 'description' => 'Build a signed installer for each supported platform.', 'estimated_hours' => 4, 'task_priority_id' => $mediumPriorityId],
+                            ['title' => 'Roll out to user machines', 'description' => 'Install on staff machines and confirm it runs.', 'estimated_hours' => 6, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'Data Analytics Dashboard',
+                'description' => 'A delivery template for turning existing data into a reporting dashboard.',
+                'is_active' => true,
+                'phases' => [
+                    [
+                        'name' => 'Requirements & Data Sources',
+                        'description' => 'Agree the questions the dashboard answers and where the data lives.',
+                        'tasks' => [
+                            ['title' => 'Define the key questions and metrics', 'description' => 'List the decisions the dashboard must support.', 'estimated_hours' => 4, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Identify and get access to data sources', 'description' => 'Find the databases and files holding the data and request access.', 'estimated_hours' => 4, 'task_priority_id' => $highPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Data Modeling & Preparation',
+                        'description' => 'Clean the data and shape it for reporting.',
+                        'tasks' => [
+                            ['title' => 'Clean and transform source data', 'description' => 'Remove duplicates, fix formats and join the sources.', 'estimated_hours' => 12, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Build the reporting data model', 'description' => 'Create the tables or views the dashboard will query.', 'estimated_hours' => 8, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Dashboard Build & Review',
+                        'description' => 'Build the charts and review them with the people who will use them.',
+                        'tasks' => [
+                            ['title' => 'Build dashboard charts and filters', 'description' => 'Create the visualisations and the filters users need.', 'estimated_hours' => 10, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Review figures with stakeholders', 'description' => 'Check the numbers against known totals with the data owners.', 'estimated_hours' => 3, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'E-Commerce Platform',
+                'description' => 'A delivery template for an online store with a catalog, checkout and order handling.',
+                'is_active' => true,
+                'phases' => [
+                    [
+                        'name' => 'Planning & Catalog Design',
+                        'description' => 'Agree what is sold and how the catalog is organised.',
+                        'tasks' => [
+                            ['title' => 'Define product catalog structure', 'description' => 'Decide categories, product attributes and pricing rules.', 'estimated_hours' => 5, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Design storefront pages', 'description' => 'Wireframe the home, listing, product and cart pages.', 'estimated_hours' => 8, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Storefront Development',
+                        'description' => 'Build the customer-facing store.',
+                        'tasks' => [
+                            ['title' => 'Build product listing and detail pages', 'description' => 'Implement browsing, search and product pages.', 'estimated_hours' => 14, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Build the shopping cart', 'description' => 'Add, update and remove items and show totals.', 'estimated_hours' => 8, 'task_priority_id' => $highPriorityId],
+                        ],
+                    ],
+                    [
+                        'name' => 'Checkout, Payments & Operations',
+                        'description' => 'Take payment and handle orders after purchase.',
+                        'tasks' => [
+                            ['title' => 'Implement checkout and payment workflows', 'description' => 'Collect delivery details, take payment and confirm the order.', 'estimated_hours' => 14, 'task_priority_id' => $highPriorityId],
+                            ['title' => 'Build order management for staff', 'description' => 'Let staff view, fulfil and refund orders.', 'estimated_hours' => 10, 'task_priority_id' => $mediumPriorityId],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         DB::transaction(function () use ($systemAdmin, $templateDefinitions): void {
@@ -128,6 +319,6 @@ class ProjectTemplateExampleSeeder extends Seeder
             }
         });
 
-        $this->command->info('✅ Project templates seeded successfully!');
+        $this->command?->info('✅ Project templates seeded successfully!');
     }
 }

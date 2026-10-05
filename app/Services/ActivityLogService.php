@@ -34,6 +34,7 @@ class ActivityLogService
             'deleted' => 'deletion',
             'status_changed' => 'status_change',
             'assigned' => 'assignment',
+            'unassigned' => 'assignment',
             'reassigned' => 'reassignment',
             'progress_updated' => 'progress_update',
             'reordered' => 'reorder',

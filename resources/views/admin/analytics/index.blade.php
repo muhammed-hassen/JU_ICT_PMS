@@ -1,370 +1,159 @@
-@extends('layouts.master')
+{{-- Reports. Same components as the dashboard: nothing lifts, grows or counts up on hover or load. --}}
+@extends('layouts.console')
+@section('title', 'Reports')
 
-@section('subtitle', 'Analytics Dashboard')
-@section('content_header_title', 'Analytics Dashboard')
-@section('content_header_subtitle', 'Real-time project performance metrics')
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+@section('content_header')
+    <x-ui.page-header title="Reports" :description="'How projects and people are performing. Scope: ' . $scopeLabel . '.'">
+        @can('export-reports')
+            <x-ui.button variant="outline" :href="route('admin.analytics.export.excel')">
+                <i data-lucide="file-spreadsheet" class="size-4"></i>
+                Export Excel
+            </x-ui.button>
+            <x-ui.button :href="route('admin.analytics.export.pdf')">
+                <i data-lucide="file-down" class="size-4"></i>
+                Export PDF
+            </x-ui.button>
+        @endcan
+    </x-ui.page-header>
+@endsection
 
-@section('content_body')
-<div class="container-fluid">
-    <!-- Stats Cards with Animation -->
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-info animated-card" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(23, 162, 184, 0.3);">
-                <div class="inner">
-                    <h3 class="counter" data-target="{{ $totalProjects ?? 0 }}">0</h3>
-                    <p>Total Projects</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-project-diagram"></i>
-                </div>
-                <div class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View all projects
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-success animated-card" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(40, 167, 69, 0.3);">
-                <div class="inner">
-                    <h3 class="counter" data-target="{{ $activeProjects ?? 0 }}">0</h3>
-                    <p>Active Projects</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-play-circle"></i>
-                </div>
-                <div class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View active
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-warning animated-card" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(255, 193, 7, 0.3);">
-                <div class="inner">
-                    <h3 class="counter" data-target="{{ $completedProjects ?? 0 }}">0</h3>
-                    <p>Completed Projects</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View completed
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-danger animated-card" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);">
-                <div class="inner">
-                    <h3>{{ number_format($avgCompletionTime ?? 0, 1) }} <small style="font-size: 18px;">days</small></h3>
-                    <p>Average Completion Time</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> Performance
-                </div>
-            </div>
-        </div>
+@section('content')
+    <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <x-ui.stat-card label="Total projects" :value="$totalProjects ?? 0" icon="folder-kanban"
+                        :href="route('admin.projects.index')" link-text="View projects" />
+        <x-ui.stat-card label="Active projects" :value="$activeProjects ?? 0" icon="circle-play" />
+        <x-ui.stat-card label="Completed projects" :value="$completedProjects ?? 0" icon="circle-check" />
+        <x-ui.stat-card label="Average project length" :value="number_format($avgCompletionTime ?? 0, 1) . ' days'" icon="clock"
+                        hint="Planned start to end date" />
     </div>
 
-    <!-- Charts Row with Glassmorphism -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card card-outline card-primary glass-card" style="border-radius: 16px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 16px 16px 0 0; border-bottom: 2px solid #e9ecef;">
-                    <h3 class="card-title" style="font-weight: 600; color: #2c3e50;">
-                        <i class="fas fa-chart-pie text-primary mr-2"></i>
-                        Project Status Distribution
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-primary">Real-time</span>
-                    </div>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <canvas id="projectStatusChart" height="280"></canvas>
-                </div>
+    <div class="mt-6 grid gap-5 lg:grid-cols-2">
+        <x-ui.card title="Projects by status" description="Where every project stands today.">
+            <div class="relative h-64">
+                <canvas id="projectStatusChart" role="img" aria-label="Projects by status chart"></canvas>
             </div>
-        </div>
+        </x-ui.card>
 
-        <div class="col-md-6">
-            <div class="card card-outline card-primary glass-card" style="border-radius: 16px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 16px 16px 0 0; border-bottom: 2px solid #e9ecef;">
-                    <h3 class="card-title" style="font-weight: 600; color: #2c3e50;">
-                        <i class="fas fa-chart-line text-success mr-2"></i>
-                        Monthly Project Creation Trend
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-success">Last 12 months</span>
+        <x-ui.card title="New projects per month" description="The last 12 months.">
+            <div class="relative h-64">
+                <canvas id="monthlyTrendChart" role="img" aria-label="New projects per month chart"></canvas>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="Project progress" description="How many projects sit in each progress band.">
+            <div class="relative h-64">
+                <canvas id="progressDistributionChart" role="img" aria-label="Project progress chart"></canvas>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="Task completion" description="Completed tasks out of all tasks.">
+            @php $rate = max(0, min(100, (float) ($completionRate ?? 0))); @endphp
+            <div class="flex h-64 flex-col items-center justify-center gap-5">
+                <div class="relative size-40">
+                    <svg viewBox="0 0 36 36" class="size-40 -rotate-90" aria-hidden="true">
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--muted)" stroke-width="3" />
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--success)" stroke-width="3"
+                                stroke-linecap="round" stroke-dasharray="{{ $rate }} 100" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="tabular text-3xl font-semibold text-foreground">{{ number_format($rate, 1) }}%</span>
+                        <span class="text-xs text-muted-foreground">complete</span>
                     </div>
                 </div>
-                <div class="card-body" style="padding: 20px;">
-                    <canvas id="monthlyTrendChart" height="280"></canvas>
-                </div>
+                <p class="tabular m-0 text-sm text-muted-foreground">
+                    <span class="font-semibold text-foreground">{{ $completedTasks ?? 0 }}</span> of {{ $totalTasks ?? 0 }} tasks done
+                </p>
             </div>
-        </div>
+        </x-ui.card>
     </div>
 
-    <!-- Progress & Completion -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card card-outline card-primary glass-card" style="border-radius: 16px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 16px 16px 0 0; border-bottom: 2px solid #e9ecef;">
-                    <h3 class="card-title" style="font-weight: 600; color: #2c3e50;">
-                        <i class="fas fa-tasks text-warning mr-2"></i>
-                        Project Progress Distribution
-                    </h3>
-                </div>
-                <div class="card-body" style="padding: 20px;">
-                    <canvas id="progressDistributionChart" height="280"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card card-outline card-primary glass-card" style="border-radius: 16px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 16px 16px 0 0; border-bottom: 2px solid #e9ecef;">
-                    <h3 class="card-title" style="font-weight: 600; color: #2c3e50;">
-                        <i class="fas fa-percentage text-info mr-2"></i>
-                        Overall Completion Rate
-                    </h3>
-                </div>
-                <div class="card-body" style="padding: 30px;">
-                    <div class="text-center">
-                        <div class="completion-ring">
-                            <svg width="180" height="180" viewBox="0 0 180 180">
-                                <circle cx="90" cy="90" r="75" fill="none" stroke="#e9ecef" stroke-width="12"/>
-                                <circle cx="90" cy="90" r="75" fill="none" stroke="#28a745" stroke-width="12"
-                                        stroke-dasharray="{{ (($completionRate ?? 0) / 100) * 471 }} 471"
-                                        stroke-linecap="round"
-                                        transform="rotate(-90 90 90)"/>
-                            </svg>
-                            <div class="completion-text">
-                                <h2 class="mb-0" style="font-weight: 700; color: #28a745;">
-                                    {{ number_format($completionRate ?? 0, 1) }}%
-                                </h2>
-                                <small class="text-muted">Completion Rate</small>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <div class="d-flex justify-content-center gap-4">
-                                <div>
-                                    <span class="badge badge-success badge-pill p-2 px-3" style="font-size: 14px;">
-                                        <i class="fas fa-check-circle mr-1"></i>
-                                        {{ $completedTasks ?? 0 }} Completed
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="badge badge-secondary badge-pill p-2 px-3" style="font-size: 14px;">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        {{ $totalTasks ?? 0 }} Total Tasks
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top Performers with Modern Table -->
-    <div class="card card-outline card-primary glass-card" style="border-radius: 16px; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
-        <div class="card-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 16px 16px 0 0; border-bottom: 2px solid #e9ecef;">
-            <h3 class="card-title" style="font-weight: 600; color: #2c3e50;">
-                <i class="fas fa-trophy text-warning mr-2"></i>
-                Top Performers
-            </h3>
-            <div class="card-tools">
-                <span class="badge badge-warning">Leaderboard</span>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            @if(isset($topPerformers) && $topPerformers->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" style="font-size: 0.95rem;">
-                        <thead style="background: #f8f9fa;">
-                            <tr>
-                                <th style="padding: 15px 20px; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6;">#</th>
-                                <th style="padding: 15px 20px; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6;">User</th>
-                                <th style="padding: 15px 20px; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6;" class="text-center">Total Tasks</th>
-                                <th style="padding: 15px 20px; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6;" class="text-center">Completed</th>
-                                <th style="padding: 15px 20px; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6;" class="text-center">Completion Rate</th>
+    <x-ui.card class="mt-6" title="Projects" description="Actual against planned progress, budget use, tasks and overdue work per project. Planned assumes work runs evenly from start to end date." flush>
+        @if (count($projectRows))
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-border bg-muted text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                            <th class="px-5 py-2.5 font-semibold">Project</th>
+                            <th class="px-5 py-2.5 font-semibold">Status</th>
+                            <th class="px-5 py-2.5 font-semibold">Progress</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Planned</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Spent / budget (ETB)</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Phases</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Tasks done</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Overdue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($projectRows as $row)
+                            <tr class="border-b border-border/70 transition-colors duration-200 last:border-0 hover:bg-background">
+                                <td class="px-5 py-3 font-semibold text-foreground">{{ $row['name'] }}</td>
+                                <td class="px-5 py-3"><x-ui.badge>{{ $row['status'] }}</x-ui.badge></td>
+                                <td class="min-w-44 px-5 py-3"><x-ui.progress :value="$row['progress']" /></td>
+                                <td @class(['tabular whitespace-nowrap px-5 py-3 text-right', 'font-semibold text-destructive' => $row['planned'] !== null && $row['progress'] < $row['planned'] - 10])>
+                                    {{ $row['planned'] !== null ? $row['planned'] . '%' : 'No dates' }}
+                                </td>
+                                <td @class(['tabular whitespace-nowrap px-5 py-3 text-right', 'font-semibold text-destructive' => $row['budget'] !== null && $row['spent'] > $row['budget']])>
+                                    {{ number_format($row['spent']) }} / {{ $row['budget'] !== null ? number_format($row['budget']) : 'not set' }}
+                                </td>
+                                <td class="tabular px-5 py-3 text-right">{{ $row['phases'] }}</td>
+                                <td class="tabular px-5 py-3 text-right">{{ $row['completed'] }} / {{ $row['tasks'] }}</td>
+                                <td @class(['tabular px-5 py-3 text-right', 'font-semibold text-destructive' => $row['overdue'] > 0])>{{ $row['overdue'] }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($topPerformers as $index => $user)
-                                <tr style="transition: all 0.2s ease;">
-                                    <td style="padding: 15px 20px; vertical-align: middle;">
-                                        @if($index == 0)
-                                            <span class="badge badge-warning" style="font-size: 16px; padding: 5px 12px; border-radius: 50%;">
-                                                <i class="fas fa-crown"></i>
-                                            </span>
-                                        @elseif($index == 1)
-                                            <span class="badge badge-secondary" style="font-size: 16px; padding: 5px 12px; border-radius: 50%;">
-                                                <i class="fas fa-medal"></i>
-                                            </span>
-                                        @elseif($index == 2)
-                                            <span class="badge badge-danger" style="font-size: 16px; padding: 5px 12px; border-radius: 50%;">
-                                                <i class="fas fa-medal"></i>
-                                            </span>
-                                        @else
-                                            <span class="text-muted" style="font-weight: 600;">#{{ $index + 1 }}</span>
-                                        @endif
-                                    </td>
-                                    <td style="padding: 15px 20px; vertical-align: middle;">
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-circle" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #1f75cb 0%, #3b5bd6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin-right: 12px;">
-                                                {{ strtoupper(substr($user->name, 0, 2)) }}
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 600; color: #2c3e50;">{{ $user->name }}</div>
-                                                <small class="text-muted">{{ $user->email }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="padding: 15px 20px; vertical-align: middle;" class="text-center">
-                                        <span class="badge badge-info badge-pill p-2 px-3" style="font-size: 14px;">
-                                            {{ $user->total_tasks }}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 15px 20px; vertical-align: middle;" class="text-center">
-                                        <span class="badge badge-success badge-pill p-2 px-3" style="font-size: 14px;">
-                                            {{ $user->completed_tasks }}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 15px 20px; vertical-align: middle;" class="text-center">
-                                        <div class="d-flex align-items-center justify-content-center">
-                                            <div class="progress" style="height: 25px; width: 120px; border-radius: 12px; background: #e9ecef;">
-                                                <div class="progress-bar bg-{{ $user->completion_rate >= 80 ? 'success' : ($user->completion_rate >= 50 ? 'warning' : 'danger') }}" 
-                                                     role="progressbar" 
-                                                     style="width: {{ $user->completion_rate }}%; border-radius: 12px; transition: width 1s ease;">
-                                                    <span style="font-size: 12px; font-weight: 600;">
-                                                        {{ number_format($user->completion_rate, 1) }}%
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="text-center p-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No data available yet. Start assigning tasks to see performance metrics.</p>
-                </div>
-            @endif
-        </div>
-    </div>
-</div>
-@stop
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <x-ui.empty-state icon="folder-kanban" title="No projects yet" description="Projects you can see will be listed here." />
+        @endif
+    </x-ui.card>
 
-@push('css')
-<style>
-    /* Animations */
-    .animated-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .animated-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.2) !important;
-    }
-    
-    .animated-card .small-box-footer {
-        transition: background 0.3s ease;
-    }
-    
-    .animated-card:hover .small-box-footer {
-        background: rgba(0,0,0,0.08);
-    }
-    
-    /* Glass Cards */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.9) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .glass-card:hover {
-        box-shadow: 0 12px 48px rgba(0,0,0,0.12) !important;
-    }
-    
-    /* Completion Ring */
-    .completion-ring {
-        position: relative;
-        display: inline-block;
-    }
-    
-    .completion-ring svg {
-        display: block;
-        transform: rotate(-90deg);
-    }
-    
-    .completion-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-    }
-    
-    /* Avatar Circle */
-    .avatar-circle {
-        flex-shrink: 0;
-        font-size: 14px;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Badge Improvements */
-    .badge-pill {
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-    }
-    
-    /* Table Hover Effect */
-    .table-hover tbody tr {
-        transition: background 0.2s ease;
-    }
-    
-    .table-hover tbody tr:hover {
-        background: #f8f9fa;
-        transform: scale(1.01);
-    }
-    
-    /* Counter Animation */
-    .counter {
-        font-weight: 700;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .completion-ring svg {
-            width: 140px;
-            height: 140px;
-        }
-        
-        .completion-text h2 {
-            font-size: 28px;
-        }
-        
-        .avatar-circle {
-            width: 32px;
-            height: 32px;
-            font-size: 12px;
-        }
-    }
-</style>
-@endpush
+    <x-ui.card class="mt-6" title="Top performers" description="People with the most completed tasks." flush>
+        @if (isset($topPerformers) && $topPerformers->count() > 0)
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-border bg-muted text-left text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                            <th class="w-12 px-5 py-2.5 font-semibold">#</th>
+                            <th class="px-5 py-2.5 font-semibold">Person</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Tasks</th>
+                            <th class="px-5 py-2.5 text-right font-semibold">Completed</th>
+                            <th class="px-5 py-2.5 font-semibold">Completion rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($topPerformers as $index => $person)
+                            <tr class="border-b border-border/70 transition-colors duration-200 last:border-0 hover:bg-background">
+                                <td class="tabular px-5 py-3 font-semibold text-muted-foreground">{{ $index + 1 }}</td>
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-semibold text-ju-navy">
+                                            {{ \Illuminate\Support\Str::of($person->name)->explode(' ')->take(2)->map(fn ($p) => mb_substr($p, 0, 1))->implode('') }}
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block font-semibold text-foreground">{{ $person->name }}</span>
+                                            <span class="block text-[13px] text-muted-foreground">{{ $person->email }}</span>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="tabular px-5 py-3 text-right">{{ $person->total_tasks }}</td>
+                                <td class="tabular px-5 py-3 text-right">{{ $person->completed_tasks }}</td>
+                                <td class="min-w-44 px-5 py-3"><x-ui.progress :value="$person->completion_rate" /></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <x-ui.empty-state icon="inbox" title="No data yet" description="Assign tasks to see how people are doing." />
+        @endif
+    </x-ui.card>
+@endsection
 
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+<<<<<<< HEAD
     document.addEventListener('DOMContentLoaded', function() {
         // Counter Animation
         document.querySelectorAll('.counter').forEach(counter => {
@@ -372,7 +161,7 @@
             const duration = 1000;
             const step = Math.max(1, Math.floor(target / 60));
             let current = 0;
-            
+
             const interval = setInterval(() => {
                 current += step;
                 if (current >= target) {
@@ -382,14 +171,37 @@
                 counter.textContent = current.toLocaleString();
             }, 16);
         });
-        
+
         // Project Status Chart
         const statusCtx = document.getElementById('projectStatusChart').getContext('2d');
         new Chart(statusCtx, {
+=======
+    document.addEventListener('DOMContentLoaded', function () {
+        var css = getComputedStyle(document.documentElement);
+        var token = function (name) { return css.getPropertyValue(name).trim(); };
+
+        Chart.defaults.font.family = token('--font-sans') || "'Source Sans 3', system-ui, sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = token('--muted-foreground');
+        Chart.defaults.borderColor = token('--border');
+
+        var bars = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+            }
+        };
+
+        new Chart(document.getElementById('projectStatusChart'), {
+>>>>>>> 76e71c94e81bc2c6a2e2a82c33998d4388b7021a
             type: 'doughnut',
             data: {
                 labels: ['Active', 'Completed', 'Draft', 'Archived'],
                 datasets: [{
+<<<<<<< HEAD
                     data: [
                         {{ $activeProjects ?? 0 }},
                         {{ $completedProjects ?? 0 }},
@@ -398,11 +210,17 @@
                     ],
                     backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#6c757d'],
                     borderWidth: 3,
+=======
+                    data: [{{ $activeProjects ?? 0 }}, {{ $completedProjects ?? 0 }}, {{ $draftProjects ?? 0 }}, {{ $archivedProjects ?? 0 }}],
+                    backgroundColor: [token('--ju-blue'), token('--success'), token('--chart-5'), token('--muted-foreground')],
+                    borderWidth: 2,
+>>>>>>> 76e71c94e81bc2c6a2e2a82c33998d4388b7021a
                     borderColor: '#ffffff',
                 }]
             },
             options: {
                 responsive: true,
+<<<<<<< HEAD
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -422,7 +240,7 @@
         const monthlyData = @json($monthlyTrend ?? []);
         const labels = Object.keys(monthlyData).reverse();
         const values = Object.values(monthlyData).reverse();
-        
+
         new Chart(trendCtx, {
             type: 'bar',
             data: {
@@ -473,7 +291,7 @@
         const progressData = @json($progressDistribution ?? []);
         const progressLabels = Object.keys(progressData);
         const progressValues = Object.values(progressData);
-        
+
         new Chart(progressCtx, {
             type: 'bar',
             data: {
@@ -516,3 +334,33 @@
     });
 </script>
 @endpush
+=======
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', boxWidth: 8 } } }
+            }
+        });
+
+        var monthly = @json($monthlyTrend ?? []);
+        new Chart(document.getElementById('monthlyTrendChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(monthly).reverse(),
+                datasets: [{ label: 'Projects', data: Object.values(monthly).reverse(), backgroundColor: token('--ju-blue'), borderRadius: 6, maxBarThickness: 40 }]
+            },
+            options: bars
+        });
+
+        var progress = @json($progressDistribution ?? []);
+        new Chart(document.getElementById('progressDistributionChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(progress),
+                datasets: [{ label: 'Projects', data: Object.values(progress), backgroundColor: token('--ju-blue'), borderRadius: 6, maxBarThickness: 40 }]
+            },
+            options: bars
+        });
+    });
+</script>
+@endpush
+>>>>>>> 76e71c94e81bc2c6a2e2a82c33998d4388b7021a

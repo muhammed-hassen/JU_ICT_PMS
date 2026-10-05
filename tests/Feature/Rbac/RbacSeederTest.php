@@ -24,10 +24,14 @@ class RbacSeederTest extends TestCase
         $directorRole = Role::findByName('ICT Director');
         $teamMemberRole = Role::findByName('Team Member');
 
-        $this->assertSame(Permission::count(), $adminRole->permissions()->count());
-        $this->assertSame(Permission::count(), $directorRole->permissions()->count());
-        $this->assertTrue($directorRole->hasPermissionTo('configure-system'));
-        $this->assertTrue($directorRole->hasPermissionTo('assign-role'));
+        // Accounts and the permission system belong to the System Administrator;
+        // project work and the organization belong to the Director.
+        $this->assertTrue($adminRole->hasPermissionTo('configure-system'));
+        $this->assertTrue($adminRole->hasPermissionTo('assign-role'));
+        $this->assertFalse($adminRole->hasPermissionTo('view-all-projects'));
+        $this->assertFalse($directorRole->hasPermissionTo('configure-system'));
+        $this->assertFalse($directorRole->hasPermissionTo('assign-role'));
+        $this->assertTrue($directorRole->hasPermissionTo('view-all-projects'));
         $this->assertTrue($teamMemberRole->hasPermissionTo('view-own-tasks'));
         $this->assertFalse($teamMemberRole->hasPermissionTo('view-all-tasks'));
     }

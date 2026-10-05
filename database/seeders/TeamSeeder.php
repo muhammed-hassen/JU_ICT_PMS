@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
 
 class TeamSeeder extends Seeder
 {
@@ -25,8 +24,7 @@ class TeamSeeder extends Seeder
                     'email_verified_at' => now(),
                 ]
             );
-            $director->syncRoles(['System Administrator']);
-            $director->givePermissionTo(Permission::all());
+            $director->syncRoles(['ICT Director']);
         }
 
         // ============================================================

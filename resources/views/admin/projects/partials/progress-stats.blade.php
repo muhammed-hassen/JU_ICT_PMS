@@ -1,94 +1,59 @@
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
-<div class="row">
-    {{-- Overall Progress --}}
-    <div class="col-md-12">
-        <div class="card card-primary card-outline">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-chart-line"></i> Project Progress
-                </h3>
-                <div class="card-tools">
-                    <span class="badge bg-primary">{{ number_format($progressStats['overall_progress'], 1) }}% Complete</span>
+@php
+    $phaseProgress = $progressStats['total_phases'] > 0
+        ? ($progressStats['completed_phases'] / $progressStats['total_phases']) * 100
+        : 0;
+    $taskProgress = $progressStats['total_tasks'] > 0
+        ? ($progressStats['completed_tasks'] / $progressStats['total_tasks']) * 100
+        : 0;
+@endphp
+
+<x-ui.card class="mt-6" title="Progress">
+    <x-slot:actions>
+        <x-ui.badge variant="primary">{{ number_format($progressStats['overall_progress'], 1) }}% complete</x-ui.badge>
+    </x-slot:actions>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+        <div class="space-y-4">
+            <div>
+                <div class="mb-1.5 flex items-center justify-between text-[13px]">
+                    <span class="font-medium">Overall</span>
+                    <span class="tabular text-muted-foreground">{{ number_format($progressStats['overall_progress'], 1) }}%</span>
                 </div>
+                <x-ui.progress :value="$progressStats['overall_progress']" :label="false" />
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="progress-group">
-                            <span class="progress-text">Overall Progress</span>
-                            <span class="progress-number"><b>{{ number_format($progressStats['overall_progress'], 1) }}%</b></span>
-                            <div class="progress">
-                                <div class="progress-bar bg-primary" 
-                                     style="width: {{ $progressStats['overall_progress'] }}%">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="progress-group mt-3">
-                            <span class="progress-text">Phases</span>
-                            <span class="progress-number">
-                                <b>{{ $progressStats['completed_phases'] }}</b>/{{ $progressStats['total_phases'] }}
-                            </span>
-                            <div class="progress">
-                                @php
-                                    $phaseProgress = $progressStats['total_phases'] > 0 
-                                        ? ($progressStats['completed_phases'] / $progressStats['total_phases']) * 100 
-                                        : 0;
-                                @endphp
-                                <div class="progress-bar bg-success" style="width: {{ $phaseProgress }}%">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="progress-group mt-3">
-                            <span class="progress-text">Tasks</span>
-                            <span class="progress-number">
-                                <b>{{ $progressStats['completed_tasks'] }}</b>/{{ $progressStats['total_tasks'] }}
-                            </span>
-                            <div class="progress">
-                                @php
-                                    $taskProgress = $progressStats['total_tasks'] > 0 
-                                        ? ($progressStats['completed_tasks'] / $progressStats['total_tasks']) * 100 
-                                        : 0;
-                                @endphp
-                                <div class="progress-bar bg-info" style="width: {{ $taskProgress }}%">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <span class="badge badge-success">Completed Phases</span>
-                                <h3>{{ $progressStats['completed_phases'] }}</h3>
-                            </div>
-                            <div>
-                                <span class="badge badge-warning">Active Phases</span>
-                                <h3>{{ $progressStats['active_phases'] }}</h3>
-                            </div>
-                            <div>
-                                <span class="badge badge-secondary">Not Started</span>
-                                <h3>{{ $progressStats['not_started_phases'] }}</h3>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between mt-3">
-                            <div>
-                                <span class="badge badge-success">Completed Tasks</span>
-                                <h3>{{ $progressStats['completed_tasks'] }}</h3>
-                            </div>
-                            <div>
-                                <span class="badge badge-warning">In Progress</span>
-                                <h3>{{ $progressStats['in_progress_tasks'] }}</h3>
-                            </div>
-                            <div>
-                                <span class="badge badge-secondary">Not Started</span>
-                                <h3>{{ $progressStats['not_started_tasks'] }}</h3>
-                            </div>
-                        </div>
-                    </div>
+            <div>
+                <div class="mb-1.5 flex items-center justify-between text-[13px]">
+                    <span class="font-medium">Phases</span>
+                    <span class="tabular text-muted-foreground">{{ $progressStats['completed_phases'] }} of {{ $progressStats['total_phases'] }}</span>
                 </div>
+                <x-ui.progress :value="$phaseProgress" :label="false" />
+            </div>
+            <div>
+                <div class="mb-1.5 flex items-center justify-between text-[13px]">
+                    <span class="font-medium">Tasks</span>
+                    <span class="tabular text-muted-foreground">{{ $progressStats['completed_tasks'] }} of {{ $progressStats['total_tasks'] }}</span>
+                </div>
+                <x-ui.progress :value="$taskProgress" :label="false" />
             </div>
         </div>
+
+        @php
+            $counts = [
+                ['Phases done', $progressStats['completed_phases']],
+                ['Phases active', $progressStats['active_phases']],
+                ['Phases not started', $progressStats['not_started_phases']],
+                ['Tasks done', $progressStats['completed_tasks']],
+                ['Tasks in progress', $progressStats['in_progress_tasks']],
+                ['Tasks not started', $progressStats['not_started_tasks']],
+            ];
+        @endphp
+        <dl class="m-0 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
+            @foreach ($counts as [$label, $count])
+                <div class="bg-card px-4 py-3">
+                    <dt class="text-xs font-normal text-muted-foreground">{{ $label }}</dt>
+                    <dd class="tabular m-0 mt-1 text-xl font-semibold">{{ $count }}</dd>
+                </div>
+            @endforeach
+        </dl>
     </div>
-</div>
+</x-ui.card>

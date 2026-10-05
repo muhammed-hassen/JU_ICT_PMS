@@ -73,7 +73,7 @@ class ActivityController extends Controller
             'total' => ActivityLog::count(),
             'today' => ActivityLog::whereDate('created_at', now()->toDateString())->count(),
             'this_week' => ActivityLog::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'this_month' => ActivityLog::whereMonth('created_at', now()->month)->count(),
+            'this_month' => ActivityLog::where('created_at', '>=', now()->startOfMonth())->count(),
         ];
 
         return view('admin.activity.index', compact('activities', 'users', 'actions', 'types', 'stats'));

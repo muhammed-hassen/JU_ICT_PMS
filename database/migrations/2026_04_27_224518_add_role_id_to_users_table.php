@@ -10,11 +10,11 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up()
-{
-    Schema::table('users', function (Blueprint $table) {
-        $table->foreignId('role_id')->constrained()->onDelete('cascade');
-    });
-}
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreignId('role_id')->constrained()->onDelete('cascade');
+        });
+    }
 
     /**
      * Reverse the migrations.

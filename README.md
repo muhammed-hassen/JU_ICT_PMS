@@ -1,59 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# JU ICT Project Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A web application for the Jimma University ICT Directorate (the JU-ICT Team) to plan, assign and track ICT projects. Work is organised as **Project → Phases (milestones) → Tasks**, and projects can be generated from reusable templates.
 
-## About Laravel
+Built with Laravel 12 (PHP 8.2+), MySQL, Blade and Tailwind CSS. Access control uses [spatie/laravel-permission](https://spatie.be/docs/laravel-permission).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Area | What it does |
+|---|---|
+| Roles and access | Four roles with strict, need-to-know permissions (see below). Permissions belong to roles only, never to individual users. Every route checks a permission on the server. |
+| Organization | Directors, team leaders, teams (with parent teams) and members, plus an organization chart. |
+| Projects | Create projects with objectives, a budget and dates, assign teams, and optionally generate phases and tasks from a template. The owner or the Director closes a project once every task is done. |
+| Phases | Create, reorder and track phases, each with milestones (deliverable and due date). A phase completes itself when its last task does. |
+| Tasks | Task list with filters, a drag-and-drop board, My Tasks, a status workflow (Not Started → In Progress → Under Review → Completed, plus Blocked), priorities, deadlines, overdue tracking, subtasks, and estimated and actual cost. Members move their own tasks up to Under Review; the Team Leader completes them. |
+| Assignment | A primary assignee plus extra assignees. Team Leaders can only assign within their own teams. |
+| Templates | Six example templates, including the standard ICT lifecycle (Initiation, Planning, Execution, Monitoring, Closure). Templates are editable, with phases and tasks. |
+| Dashboards | A separate dashboard per role: office-wide for the Director, accounts and activity for the System Administrator, team workload and reviews for Team Leaders, and own work for Members. |
+| Reports | Charts, planned against actual progress, budget against spending, and top performers, scoped to what the viewer can see. Export as **PDF** or **Excel (CSV)**. |
+| Messaging | One-to-one and group conversations. Members reach their own team, the Director and the System Administrator; Team Leaders can also reach each other. Unread counts appear in the sidebar. |
+| Notifications | A bell in the top bar for task assignments, status changes, new messages, and daily alerts for work due tomorrow or overdue. |
+| Files | Upload, download and delete documents on a project. Members can delete only their own uploads. |
+| Activity log | Who changed what and when, with filters. Task status history and project progress history are kept too. |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Self-registration is off, and there is no self-service profile page: accounts, emails and passwords are managed by the System Administrator and the Director in User Management.
 
-## Learning Laravel
+## Who can do what
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Defined in `config/rbac.php` (the `roles` section). Each role sees only what its job needs.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Role | Can | Cannot |
+|---|---|---|
+| ICT Director | All projects, phases, tasks and reports; the organization (teams, leaders, members, org chart); the activity log; use templates | Manage login accounts, roles or permissions; edit templates |
+| System Administrator | Login accounts and role assignment, roles and permissions, templates, reference data, the activity log | See or change projects, tasks, teams or reports |
+| Team Leader | Their own teams' projects, phases, tasks, board and reports; create projects (from templates too) and edit the ones they created; assign and review tasks; their own team page | Other teams' work, the staff directories, the org chart, templates, accounts, the activity log |
+| Team Member | Their own tasks (move them up to Under Review), the projects those tasks are in, messages to their own team | Other people's tasks, task lists and board, phases, reports, teams and every admin page |
 
-## Laravel Sponsors
+## Requirements
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP 8.2 or newer, with the `pdo_mysql`, `mbstring`, `gd` and `dom` extensions
+- Composer 2
+- MySQL 8 (or MariaDB 10.6+)
+- Node.js 20+, only needed to rebuild the CSS
 
-### Premium Partners
+## Setup
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+git clone <repository-url> ju-ict-pms
+cd ju-ict-pms
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+Create an empty MySQL database called `ju_ict_pms`, then set `DB_USERNAME` and `DB_PASSWORD` in `.env`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan migrate --seed
+php artisan serve
+```
 
-## Code of Conduct
+Open http://localhost:8000.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The compiled stylesheet (`public/css/ju.css`) is committed, so you don't need Node to run the app. Rebuild it only after changing Blade classes or `resources/css/ju.css`:
 
-## Security Vulnerabilities
+```bash
+npm install
+npm run build
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Demo accounts
 
-## License
+These are created by `php artisan migrate --seed`. **Change every password before real use.**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Role | Email | Password |
+|---|---|---|
+| ICT Director | director@ict.ju.edu.et | Director@123 |
+| System Administrator | admin@ict.ju.edu.et | Admin@123 |
+| Team Leader | teamleader@ict.ju.edu.et | Leader@123 |
+| Team Member | member@ict.ju.edu.et | Member@123 |
+| Team Leaders (Development, Infrastructure, Support) | dev.lead@, infra.lead@, support.lead@ict.ju.edu.et | password |
+| Team Members 1 to 3 | member1@ to member3@ict.ju.edu.et | password |
+
+## Tests
+
+The tests run against an in-memory SQLite database, so they don't touch your MySQL data.
+
+```bash
+php artisan test
+```
+
+## Project layout
+
+| Path | Contents |
+|---|---|
+| `app/Http/Controllers/Admin` | Projects, phases, tasks, templates, reports, files, roles and permissions |
+| `app/Http/Controllers/Organization` | Directors, team leaders, members and teams |
+| `app/Http/Controllers/MessageController.php` | Messaging |
+| `app/Http/Controllers/HomeController.php` | Chooses the dashboard for each role |
+| `app/Services` | Template application, the task workflow, progress calculation and the activity log |
+| `app/Console/Commands` | `pms:deadline-alerts`, the daily due-tomorrow and overdue alerts |
+| `config/rbac.php` | Every permission and which role gets it. Seeders read this file. |
+| `config/navigation.php` | The sidebar menu and the permission behind each item |
+| `resources/views/dashboards` | The four role dashboards |
+| `resources/views/components/ui` | Shared Blade components (button, card, badge, stat card and more) |
+
+## Adding a permission
+
+1. Add it to the right module in `config/rbac.php`, and to each role that should have it.
+2. For existing databases, add a migration that creates the permission and grants it. See `database/migrations/2026_09_25_120100_grant_messaging_dashboard_report_permissions.php` for the pattern.
+3. Protect the route with `->middleware('permission:your-permission')`.
+
+## Deployment notes
+
+- Set `APP_ENV=production` and `APP_DEBUG=false`.
+- Run `php artisan migrate --force`, then `php artisan config:cache route:cache view:cache`.
+- Uploaded project files live in `storage/app/private/project-files`. Include this folder in backups.
+- Notifications and messages are stored in the database. No queue worker or mail server is required.
+- Deadline alerts need Laravel's scheduler. Add this cron entry on the server: `* * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1`

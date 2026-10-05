@@ -1,343 +1,158 @@
-@extends('layouts.master')
+@extends('layouts.console')
 
-@section('subtitle', 'Phase Management')
-@section('content_header_title', '📊 Phase Management')
-@section('content_header_subtitle', 'Overview of all project phases and milestones')
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+@section('title', 'Phase Management')
 
-@section('content_header_actions')
-    <a href="{{ route('admin.projects.create') }}" class="btn btn-primary btn-sm">
-        <i class="fas fa-plus"></i> New Project
-    </a>
-    <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-list"></i> All Projects
-    </a>
+@section('content_header')
+    <x-ui.page-header title="Phase Management" description="Overview of all project phases and milestones.">
+        @canvisit(route('admin.templates.index'))
+            <x-ui.button variant="outline" :href="route('admin.templates.index')">
+                <i data-lucide="copy" class="size-4"></i>
+                Manage Templates
+            </x-ui.button>
+        @endcanvisit
+        @canvisit(route('admin.projects.index'))
+            <x-ui.button variant="outline" :href="route('admin.projects.index')">
+                <i data-lucide="list" class="size-4"></i>
+                All Projects
+            </x-ui.button>
+        @endcanvisit
+        @canvisit(route('admin.projects.create'))
+            <x-ui.button :href="route('admin.projects.create')">
+                <i data-lucide="plus" class="size-4"></i>
+                New Project
+            </x-ui.button>
+        @endcanvisit
+    </x-ui.page-header>
 @endsection
 
-@section('content_body')
-<div class="container-fluid fade-in">
-    <!-- Stats Cards -->
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-info">
-                <div class="inner">
-                    <h3>{{ \App\Models\Project::count() }}</h3>
-                    <p>Total Projects</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-project-diagram"></i>
-                </div>
-                <a href="{{ route('admin.projects.index') }}" class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View All Projects
-                </a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-success">
-                <div class="inner">
-                    <h3>{{ \App\Models\Phase::count() }}</h3>
-                    <p>Total Phases</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-layer-group"></i>
-                </div>
-                <a href="#" class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View All Phases
-                </a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-warning">
-                <div class="inner">
-                    <h3>{{ \App\Models\Task::count() }}</h3>
-                    <p>Total Tasks</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-tasks"></i>
-                </div>
-                <a href="#" class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View All Tasks
-                </a>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-gradient-danger">
-                <div class="inner">
-                    <h3>{{ \App\Models\Phase::whereHas('status', function($q) { $q->where('name', 'Completed'); })->count() }}</h3>
-                    <p>Completed Phases</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <a href="#" class="small-box-footer">
-                    <i class="fas fa-arrow-circle-right"></i> View Completed
-                </a>
-            </div>
-        </div>
+@section('content')
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <x-ui.stat-card label="Total Projects"    :value="$totals['projects']"        icon="folder-kanban"  color="blue"    :href="route('admin.projects.index')" link-text="View all projects" />
+        <x-ui.stat-card label="Total Phases"      :value="$totals['phases']"          icon="layers"         color="navy" />
+        <x-ui.stat-card label="Total Tasks"       :value="$totals['tasks']"           icon="list-todo"      color="neutral" />
+        <x-ui.stat-card label="Completed Phases"  :value="$totals['completedPhases']" icon="circle-check"   color="green" />
     </div>
 
-    <!-- Quick Action Cards -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-3 align-items-center">
-                        <span class="fw-bold text-muted me-3">Quick Actions:</span>
-                        <a href="{{ route('admin.projects.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> Create Project
-                        </a>
-                        <a href="{{ route('admin.templates.index') }}" class="btn btn-info btn-sm">
-                            <i class="fas fa-copy"></i> Manage Templates
-                        </a>
-                        <a href="{{ route('admin.projects.index') }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-list"></i> All Projects
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <x-ui.card flush class="mt-6">
+        <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h3 class="m-0 font-sans text-[15px] font-semibold">Projects with Phases</h3>
+            <x-ui.badge>{{ $projects->total() }} Projects</x-ui.badge>
         </div>
-    </div>
 
-    <!-- Projects with Phases Table -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-list me-2 text-primary"></i>
-                Projects with Phases
-            </h3>
-            <div class="card-tools">
-                <span class="badge bg-primary">{{ $projects->total() }} Projects</span>
-                <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                    <i class="fas fa-expand"></i>
-                </button>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            @if($projects->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 30px;">#</th>
-                                <th>Project</th>
-                                <th class="text-center">Phases</th>
-                                <th class="text-center">Tasks</th>
-                                <th class="text-center">Progress</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Actions</th>
+        @if ($projects->count() > 0)
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-border bg-muted">
+                        <tr>
+                            <x-ui.th class="w-10">#</x-ui.th>
+                            <x-ui.th>Project</x-ui.th>
+                            <x-ui.th class="text-right">Phases</x-ui.th>
+                            <x-ui.th class="text-right">Tasks</x-ui.th>
+                            <x-ui.th class="min-w-44">Progress</x-ui.th>
+                            <x-ui.th>Status</x-ui.th>
+                            <x-ui.th class="text-right"><span class="sr-only">Actions</span></x-ui.th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($projects as $index => $project)
+                            @php
+                                $statusVariant = [
+                                    'active'    => 'primary',
+                                    'completed' => 'success',
+                                ][$project->status] ?? 'neutral';
+
+                                switch ($project->status) {
+                                    case 'completed':
+                                        $borderColor = '#22c55e';
+                                        $bgColor     = 'rgba(34,197,94,0.07)';
+                                        break;
+                                    case 'active':
+                                        $borderColor = '#0067B8';
+                                        $bgColor     = 'rgba(0,103,184,0.07)';
+                                        break;
+                                    case 'on_hold':
+                                        $borderColor = '#f59e0b';
+                                        $bgColor     = 'rgba(245,158,11,0.07)';
+                                        break;
+                                    case 'cancelled':
+                                        $borderColor = '#9ca3af';
+                                        $bgColor     = 'rgba(156,163,175,0.06)';
+                                        break;
+                                    default: // draft / unknown
+                                        $borderColor = '#cbd5e1';
+                                        $bgColor     = 'transparent';
+                                }
+                            @endphp
+                            <tr class="border-b border-border/70 last:border-0 cursor-pointer"
+                                onclick="window.location='{{ route('admin.projects.show', $project) }}'"
+                                style="border-left: 5px solid {{ $borderColor }}; background-color: {{ $bgColor }};"
+                                onmouseover="this.style.filter='brightness(0.95)'"
+                                onmouseout="this.style.filter=''">
+                                <x-ui.td class="tabular text-muted-foreground">{{ $projects->firstItem() + $index }}</x-ui.td>
+                                <x-ui.td class="min-w-56">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-[13px] font-semibold text-foreground" aria-hidden="true">
+                                            {{ strtoupper(substr($project->name, 0, 2)) }}
+                                        </span>
+                                        <div class="min-w-0">
+                                            <span class="font-semibold text-foreground">{{ $project->name }}</span>
+                                            @if ($project->description)
+                                                <p class="m-0 text-[13px] text-muted-foreground">{{ Str::limit($project->description, 60) }}</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </x-ui.td>
+                                <x-ui.td class="tabular text-right">{{ $project->phases_count }}</x-ui.td>
+                                <x-ui.td class="tabular text-right">{{ $project->phases->sum(fn ($p) => $p->tasks->count()) }}</x-ui.td>
+                                <x-ui.td><x-ui.progress :value="$project->progress_percentage ?? 0" /></x-ui.td>
+                                <x-ui.td><x-ui.badge :variant="$statusVariant">{{ ucfirst($project->status) }}</x-ui.badge></x-ui.td>
+                                <x-ui.td>
+                                    <div class="flex items-center justify-end gap-0.5">
+                                        @canvisit(route('admin.projects.show', $project))
+                                            <x-ui.icon-button icon="eye" label="View Project" :href="route('admin.projects.show', $project)" />
+                                        @endcanvisit
+                                        @canvisit(route('admin.projects.phases.index', $project))
+                                            <x-ui.icon-button icon="layers" label="Manage Phases" :href="route('admin.projects.phases.index', $project)" />
+                                        @endcanvisit
+                                        @canvisit(route('admin.projects.phases.create', $project))
+                                            <x-ui.icon-button icon="plus" label="Add Phase" :href="route('admin.projects.phases.create', $project)" />
+                                        @endcanvisit
+                                        @canvisit(route('admin.projects.edit', $project))
+                                            <x-ui.icon-button icon="pencil" label="Edit Project" :href="route('admin.projects.edit', $project)" />
+                                        @endcanvisit
+                                    </div>
+                                </x-ui.td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($projects as $index => $project)
-                                <tr>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ $projects->firstItem() + $index }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="project-icon me-3" style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #4facfe, #1f75cb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px;">
-                                                {{ strtoupper(substr($project->name, 0, 2)) }}
-                                            </div>
-                                            <div>
-                                                <strong class="text-dark">{{ $project->name }}</strong>
-                                                @if($project->description)
-                                                    <br><small class="text-muted">{{ Str::limit($project->description, 60) }}</small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge badge-info badge-pill" style="font-size: 14px; padding: 6px 14px;">
-                                            <i class="fas fa-layer-group me-1"></i>
-                                            {{ $project->phases_count }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge badge-secondary badge-pill" style="font-size: 14px; padding: 6px 14px;">
-                                            <i class="fas fa-tasks me-1"></i>
-                                            {{ $project->phases->sum(fn($p) => $p->tasks->count()) }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex align-items-center justify-content-center">
-                                            <div class="progress" style="height: 8px; width: 120px;">
-                                                <div class="progress-bar bg-{{ $project->progress_percentage >= 80 ? 'success' : ($project->progress_percentage >= 50 ? 'warning' : 'danger') }}" 
-                                                     role="progressbar" 
-                                                     style="width: {{ $project->progress_percentage ?? 0 }}%;">
-                                                </div>
-                                            </div>
-                                            <span class="ms-2 text-muted small fw-bold">
-                                                {{ number_format($project->progress_percentage ?? 0, 0) }}%
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        @php
-                                            $statusColors = [
-                                                'draft' => 'secondary',
-                                                'active' => 'success',
-                                                'completed' => 'primary',
-                                                'archived' => 'dark'
-                                            ];
-                                            $statusIcons = [
-                                                'draft' => 'fa-pen',
-                                                'active' => 'fa-play',
-                                                'completed' => 'fa-check-circle',
-                                                'archived' => 'fa-archive'
-                                            ];
-                                        @endphp
-                                        <span class="badge badge-{{ $statusColors[$project->status] ?? 'secondary' }} badge-pill" style="padding: 6px 14px;">
-                                            <i class="fas {{ $statusIcons[$project->status] ?? 'fa-circle' }} me-1"></i>
-                                            {{ ucfirst($project->status) }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ route('admin.projects.show', $project) }}" 
-                                               class="btn btn-outline-info" 
-                                               title="View Project"
-                                               data-toggle="tooltip">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{{ route('admin.projects.phases.index', $project) }}" 
-                                               class="btn btn-outline-success" 
-                                               title="Manage Phases"
-                                               data-toggle="tooltip">
-                                                <i class="fas fa-layer-group"></i>
-                                            </a>
-                                            <a href="{{ route('admin.projects.phases.create', $project) }}" 
-                                               class="btn btn-outline-primary" 
-                                               title="Add Phase"
-                                               data-toggle="tooltip">
-                                                <i class="fas fa-plus"></i>
-                                            </a>
-                                            <a href="{{ route('admin.projects.edit', $project) }}" 
-                                               class="btn btn-outline-warning" 
-                                               title="Edit Project"
-                                               data-toggle="tooltip">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <div class="text-center p-5">
-                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                    <h5 class="text-muted">No Projects Found</h5>
-                    <p class="text-muted mb-3">Create your first project to start managing phases.</p>
-                    <a href="{{ route('admin.projects.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create Project
-                    </a>
-                </div>
-            @endif
-        </div>
-        @if($projects->hasPages())
-            <div class="card-footer">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted small">
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <x-ui.empty-state icon="inbox" title="No Projects Found" description="Create your first project to start managing phases.">
+                @canvisit(route('admin.projects.create'))
+                    <x-ui.button :href="route('admin.projects.create')">
+                        <i data-lucide="plus" class="size-4"></i>
+                        Create Project
+                    </x-ui.button>
+                @endcanvisit
+            </x-ui.empty-state>
+        @endif
+
+        @if ($projects->hasPages())
+            <x-slot:footer>
+                <div class="flex w-full flex-wrap items-center justify-between gap-3">
+                    <span class="tabular text-muted-foreground">
                         Showing {{ $projects->firstItem() }} to {{ $projects->lastItem() }} of {{ $projects->total() }} projects
                     </span>
-                    {{ $projects->links() }}
+                    <div>{{ $projects->links() }}</div>
                 </div>
-            </div>
+            </x-slot:footer>
         @endif
-    </div>
+    </x-ui.card>
 
-    <!-- Quick Stats Cards Bottom -->
-    <div class="row mt-3">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="p-3 bg-primary bg-opacity-10 rounded-3">
-                                <i class="fas fa-rocket fa-2x text-primary"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-1">{{ \App\Models\Project::where('status', 'active')->count() }}</h5>
-                            <p class="text-muted mb-0">Active Projects</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="p-3 bg-success bg-opacity-10 rounded-3">
-                                <i class="fas fa-check-double fa-2x text-success"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-1">{{ \App\Models\Project::where('status', 'completed')->count() }}</h5>
-                            <p class="text-muted mb-0">Completed Projects</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="p-3 bg-warning bg-opacity-10 rounded-3">
-                                <i class="fas fa-clock fa-2x text-warning"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-1">{{ \App\Models\Project::where('status', 'draft')->count() }}</h5>
-                            <p class="text-muted mb-0">Draft Projects</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="mt-6 grid gap-4 md:grid-cols-3">
+        <x-ui.stat-card label="Active Projects"    :value="$totals['byStatus']['active'] ?? 0"    icon="rocket"      color="blue" />
+        <x-ui.stat-card label="Completed Projects" :value="$totals['byStatus']['completed'] ?? 0" icon="check-check" color="green" />
+        <x-ui.stat-card label="Draft Projects"     :value="$totals['byStatus']['draft'] ?? 0"     icon="clock"       color="neutral" />
     </div>
-</div>
-@stop
-
-@push('css')
-<style>
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #17a2b8 0%, #0d6efd 100%) !important;
-    }
-    .bg-gradient-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-    }
-    .bg-gradient-warning {
-        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
-    }
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%) !important;
-    }
-    .bg-opacity-10 {
-        opacity: 0.1;
-    }
-    .project-icon {
-        flex-shrink: 0;
-    }
-    .gap-3 {
-        gap: 1rem;
-    }
-    .fw-bold {
-        font-weight: 700 !important;
-    }
-    .text-dark {
-        color: #1a2332 !important;
-    }
-</style>
-@endpush
+@endsection

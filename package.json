@@ -3,18 +3,16 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "build": "npm run build:legacy && npm run build:css",
+        "build:legacy": "sass resources/sass/bootstrap-legacy.scss resources/css/legacy/bootstrap.css --no-source-map --quiet-deps --silence-deprecation=import,global-builtin,color-functions,mixed-decls && node scripts/soften-bootstrap-utilities.mjs resources/css/legacy/bootstrap.css",
+        "build:css": "tailwindcss -i resources/css/ju.css -o public/css/ju.css --minify",
+        "watch:css": "tailwindcss -i resources/css/ju.css -o public/css/ju.css --watch"
     },
     "devDependencies": {
-        "@popperjs/core": "^2.11.6",
-        "@tailwindcss/vite": "^4.0.0",
-        "axios": "^1.11.0",
-        "bootstrap": "^5.2.3",
-        "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0.0",
+        "@tailwindcss/cli": "^4.3.3",
+        "bootstrap": "^4.6.2",
+        "lucide": "^1.48.0",
         "sass": "^1.56.1",
-        "tailwindcss": "^4.0.0",
-        "vite": "^7.0.7"
+        "tailwindcss": "^4.0.0"
     }
 }

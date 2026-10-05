@@ -6,136 +6,220 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Reports. Every number is built from the projects and tasks the viewer is
+ * allowed to see, so a Team Leader's report covers their teams only. The
+ * page, the PDF and the Excel (CSV) export all read the same data.
+ */
 class ProjectAnalyticsController extends Controller
 {
     public function index(): View
     {
-        // Overall stats
-        $totalProjects = Project::count();
-        $activeProjects = Project::where('status', 'active')->count();
-        $completedProjects = Project::where('status', 'completed')->count();
-        $draftProjects = Project::where('status', 'draft')->count();
-        $archivedProjects = Project::where('status', 'archived')->count();
+        return view('admin.analytics.index', $this->reportData(auth()->user()));
+    }
 
-        // Average project completion time (in days)
-        $avgCompletionTime = Project::where('status', 'completed')
-            ->whereNotNull('start_date')
-            ->whereNotNull('end_date')
-            ->select(DB::raw('AVG(DATEDIFF(end_date, start_date)) as avg_days'))
-            ->value('avg_days') ?? 0;
+    /** Machine-readable copy of the report. */
+    public function export(): JsonResponse
+    {
+        $data = $this->reportData(auth()->user());
 
-        // Tasks stats
-        $totalTasks = Task::count();
-        $completedTasks = Task::whereHas('status', function ($q) {
-            $q->where('name', 'Done')->orWhere('name', 'Completed');
-        })->count();
+        return response()->json([
+            'generated_at' => now()->toDateTimeString(),
+            'scope' => $data['scopeLabel'],
+            'projects' => [
+                'total' => $data['totalProjects'],
+                'by_status' => $data['statusCounts'],
+            ],
+            'tasks' => [
+                'total' => $data['totalTasks'],
+                'completed' => $data['completedTasks'],
+                'overdue' => $data['overdueTasks'],
+            ],
+            'budget' => [
+                'total' => $data['totalBudget'],
+                'spent' => $data['totalSpent'],
+            ],
+            'project_rows' => $data['projectRows'],
+            'people' => $data['topPerformers']->map->only(['name', 'email', 'total_tasks', 'completed_tasks', 'completion_rate'])->values(),
+        ]);
+    }
 
-        $completionRate = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0;
+    public function exportPdf(): Response
+    {
+        $data = $this->reportData(auth()->user()) + ['generatedAt' => now()];
 
-        // Project progress distribution
-        $progressDistribution = Project::select(
-            DB::raw('CASE 
-                WHEN progress_percentage >= 90 THEN "90-100%"
-                WHEN progress_percentage >= 70 THEN "70-89%"
-                WHEN progress_percentage >= 50 THEN "50-69%"
-                WHEN progress_percentage >= 30 THEN "30-49%"
-                ELSE "0-29%"
-            END as progress_range'),
-            DB::raw('count(*) as count')
-        )
-            ->groupBy('progress_range')
-            ->get()
-            ->pluck('count', 'progress_range')
-            ->toArray();
+        return Pdf::loadView('admin.analytics.pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->download('ju-ict-pms-report-'.now()->format('Y-m-d').'.pdf');
+    }
 
-        // Top performers (users with most completed tasks)
-        $topPerformers = User::withCount(['tasks as total_tasks'])
-            ->withCount(['tasks as completed_tasks' => function ($q) {
-                $q->whereHas('status', function ($sq) {
-                    $sq->where('name', 'Done')->orWhere('name', 'Completed');
-                });
-            }])
-            ->orderBy('completed_tasks', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($user) {
-                $user->completion_rate = $user->total_tasks > 0
-                    ? round(($user->completed_tasks / $user->total_tasks) * 100, 2)
-                    : 0;
+    /** CSV with a UTF-8 byte order mark, so Excel opens it with the right characters. */
+    public function exportExcel(): StreamedResponse
+    {
+        $data = $this->reportData(auth()->user());
+        $filename = 'ju-ict-pms-report-'.now()->format('Y-m-d').'.csv';
 
-                return $user;
-            });
+        return response()->streamDownload(function () use ($data) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
 
-        // Monthly project creation trend
-        $monthlyTrend = Project::select(
-            DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
-            DB::raw('count(*) as count')
-        )
-            ->groupBy('month')
-            ->orderBy('month', 'desc')
-            ->limit(12)
-            ->get()
-            ->pluck('count', 'month')
-            ->toArray();
+            fputcsv($out, ['JU ICT PMS report', $data['scopeLabel'], 'Generated '.now()->format('Y-m-d H:i')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Summary']);
+            foreach ([
+                'Projects' => $data['totalProjects'],
+                'Active projects' => $data['activeProjects'],
+                'Completed projects' => $data['completedProjects'],
+                'Tasks' => $data['totalTasks'],
+                'Completed tasks' => $data['completedTasks'],
+                'Overdue tasks' => $data['overdueTasks'],
+                'Task completion rate (%)' => $data['completionRate'],
+                'Total budget (ETB)' => $data['totalBudget'],
+                'Total spent (ETB)' => $data['totalSpent'],
+            ] as $label => $value) {
+                fputcsv($out, [$label, $value]);
+            }
 
-        // Project by team
-        $projectsByTeam = DB::table('project_teams')
-            ->join('teams', 'project_teams.team_id', '=', 'teams.id')
-            ->select('teams.name', DB::raw('count(*) as count'))
-            ->groupBy('teams.id', 'teams.name')
-            ->get()
-            ->pluck('count', 'name')
-            ->toArray();
+            fputcsv($out, []);
+            fputcsv($out, ['Projects']);
+            fputcsv($out, ['Project', 'Status', 'Progress (%)', 'Start', 'End', 'Phases', 'Tasks', 'Completed tasks', 'Overdue tasks', 'Planned progress (%)', 'Budget (ETB)', 'Estimated cost (ETB)', 'Spent (ETB)']);
+            foreach ($data['projectRows'] as $row) {
+                fputcsv($out, array_values($row));
+            }
 
-        return view('admin.analytics.index', compact(
-            'totalProjects',
-            'activeProjects',
-            'completedProjects',
-            'draftProjects',
-            'archivedProjects',
-            'avgCompletionTime',
-            'totalTasks',
-            'completedTasks',
-            'completionRate',
-            'progressDistribution',
-            'topPerformers',
-            'monthlyTrend',
-            'projectsByTeam'
-        ));
+            fputcsv($out, []);
+            fputcsv($out, ['People']);
+            fputcsv($out, ['Name', 'Email', 'Tasks', 'Completed', 'Completion rate (%)']);
+            foreach ($data['topPerformers'] as $person) {
+                fputcsv($out, [$person->name, $person->email, $person->total_tasks, $person->completed_tasks, $person->completion_rate]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /**
-     * Export analytics data as JSON
+     * Everything the report shows, limited to what this user can see.
      */
-    public function export(Request $request)
+    private function reportData(User $user): array
     {
-        $data = [
-            'generated_at' => now()->toDateTimeString(),
-            'projects' => [
-                'total' => Project::count(),
-                'by_status' => Project::select('status', DB::raw('count(*) as count'))
-                    ->groupBy('status')
-                    ->get()
-                    ->toArray(),
-            ],
-            'tasks' => [
-                'total' => Task::count(),
-                'by_status' => Task::select('task_status_id', DB::raw('count(*) as count'))
-                    ->groupBy('task_status_id')
-                    ->with('status')
-                    ->get()
-                    ->map(fn ($item) => [
-                        'status' => $item->status?->name ?? 'Unknown',
-                        'count' => $item->count,
-                    ])
-                    ->toArray(),
-            ],
-        ];
+        $projects = $user->getVisibleProjects()->load(['phases.tasks.status']);
+        $tasks = Task::with(['status', 'assignee'])
+            ->whereIn('id', $user->getVisibleTaskIds())
+            ->get();
 
-        return response()->json($data);
+        $isDone = fn (Task $task) => in_array($task->status?->name, ['Done', 'Completed'], true);
+
+        $statusCounts = collect(['active', 'completed', 'draft', 'archived'])
+            ->mapWithKeys(fn ($status) => [$status => $projects->where('status', $status)->count()])
+            ->all();
+
+        $totalTasks = $tasks->count();
+        $completedTasks = $tasks->filter($isDone)->count();
+
+        // Planned length of completed projects, in days.
+        $avgCompletionTime = $projects->where('status', 'completed')
+            ->filter(fn ($p) => $p->start_date && $p->end_date)
+            ->avg(fn ($p) => $p->start_date->diffInDays($p->end_date)) ?? 0;
+
+        $progressDistribution = $projects->pluck('progress_percentage')
+            ->countBy(fn ($progress) => match (true) {
+                $progress >= 90 => '90-100%',
+                $progress >= 70 => '70-89%',
+                $progress >= 50 => '50-69%',
+                $progress >= 30 => '30-49%',
+                default => '0-29%',
+            })
+            ->all();
+
+        $monthlyTrend = $projects->pluck('created_at')
+            ->countBy(fn ($createdAt) => $createdAt->format('Y-m'))
+            ->sortKeysDesc()
+            ->take(12)
+            ->all();
+
+        $projectRows = $projects->sortBy('name')->map(function (Project $project) use ($isDone) {
+            $projectTasks = $project->phases->flatMap->tasks;
+
+            return [
+                'name' => $project->name,
+                'status' => ucfirst($project->status ?? 'draft'),
+                'progress' => round((float) $project->progress_percentage),
+                'start' => $project->start_date?->format('Y-m-d') ?? '',
+                'end' => $project->end_date?->format('Y-m-d') ?? '',
+                'phases' => $project->phases->count(),
+                'tasks' => $projectTasks->count(),
+                'completed' => $projectTasks->filter($isDone)->count(),
+                'overdue' => $projectTasks->filter->isOverdue()->count(),
+                'planned' => $this->plannedProgress($project),
+                'budget' => $project->budget !== null ? (float) $project->budget : null,
+                'estimated_cost' => (float) $projectTasks->sum('estimated_cost'),
+                'spent' => (float) $projectTasks->sum('actual_cost'),
+            ];
+        })->values()->all();
+
+        return [
+            'scopeLabel' => $user->isDirector() ? 'Whole JU-ICT Team' : 'Your teams',
+            'totalProjects' => $projects->count(),
+            'activeProjects' => $statusCounts['active'],
+            'completedProjects' => $statusCounts['completed'],
+            'draftProjects' => $statusCounts['draft'],
+            'archivedProjects' => $statusCounts['archived'],
+            'statusCounts' => $statusCounts,
+            'avgCompletionTime' => $avgCompletionTime,
+            'totalTasks' => $totalTasks,
+            'completedTasks' => $completedTasks,
+            'overdueTasks' => $tasks->filter->isOverdue()->count(),
+            'completionRate' => $totalTasks > 0 ? round($completedTasks / $totalTasks * 100, 1) : 0,
+            'progressDistribution' => $progressDistribution,
+            'monthlyTrend' => $monthlyTrend,
+            'projectRows' => $projectRows,
+            'topPerformers' => $this->people($tasks, $isDone),
+            'totalBudget' => collect($projectRows)->sum('budget'),
+            'totalSpent' => collect($projectRows)->sum('spent'),
+        ];
+    }
+
+    /**
+     * Where the project should be by today if work ran evenly from start to end
+     * date. Compared with actual progress, this is the planned-vs-actual view.
+     */
+    private function plannedProgress(Project $project): ?int
+    {
+        if (! $project->start_date || ! $project->end_date) {
+            return null;
+        }
+
+        $total = max(1, $project->start_date->diffInDays($project->end_date));
+        $elapsed = $project->start_date->diffInDays(now(), false);
+
+        return (int) round(min(100, max(0, $elapsed / $total * 100)));
+    }
+
+    /** People with tasks in scope, most completed first. */
+    private function people(Collection $tasks, callable $isDone): Collection
+    {
+        return $tasks->whereNotNull('assigned_to')
+            ->groupBy('assigned_to')
+            ->map(function (Collection $assigned) use ($isDone) {
+                $person = $assigned->first()->assignee;
+                $done = $assigned->filter($isDone)->count();
+                $person->total_tasks = $assigned->count();
+                $person->completed_tasks = $done;
+                $person->completion_rate = round($done / $assigned->count() * 100, 1);
+
+                return $person;
+            })
+            ->filter()
+            ->sortByDesc('completed_tasks')
+            ->take(10)
+            ->values();
     }
 }

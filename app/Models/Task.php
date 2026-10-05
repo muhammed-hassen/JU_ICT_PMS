@@ -2,16 +2,47 @@
 
 namespace App\Models;
 
+use App\Notifications\TaskAssigned;
+use App\Notifications\TaskStatusChanged;
+use App\Services\ActivityLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class Task extends Model
 {
     use SoftDeletes;
+
+    /** Fields whose change is worth a line in the activity log. Status and assignment are logged separately. */
+    private const LOGGED_FIELDS = ['title', 'description', 'deadline', 'start_date', 'task_priority_id', 'estimated_hours', 'estimated_cost', 'actual_cost', 'resources'];
+
+    protected static function booted(): void
+    {
+        // Only log what a signed-in person did; seeders and console scripts stay quiet.
+        static::created(function (Task $task) {
+            if (auth()->check()) {
+                app(ActivityLogService::class)->log($task, 'created', "Task created: {$task->title}");
+            }
+        });
+
+        static::updated(function (Task $task) {
+            $changed = array_intersect(array_keys($task->getChanges()), self::LOGGED_FIELDS);
+            if (auth()->check() && $changed) {
+                app(ActivityLogService::class)->log($task, 'updated', "Task updated: {$task->title}", ['fields' => array_values($changed)]);
+            }
+        });
+
+        static::deleted(function (Task $task) {
+            if (auth()->check()) {
+                app(ActivityLogService::class)->log($task, 'deleted', "Task deleted: {$task->title}");
+            }
+        });
+    }
 
     protected $fillable = [
         'phase_id',
@@ -23,6 +54,9 @@ class Task extends Model
         'description',
         'estimated_hours',
         'actual_hours',
+        'estimated_cost',
+        'actual_cost',
+        'resources',
         'start_date',
         'deadline',
         'progress_percentage',
@@ -47,6 +81,8 @@ class Task extends Model
         'status_changed_at' => 'datetime',
         'estimated_hours' => 'decimal:2',
         'actual_hours' => 'decimal:2',
+        'estimated_cost' => 'decimal:2',
+        'actual_cost' => 'decimal:2',
         'progress_percentage' => 'decimal:2',
         'time_in_status' => 'array',
         'priority_score' => 'integer',
@@ -69,6 +105,11 @@ class Task extends Model
     public function priority(): BelongsTo
     {
         return $this->belongsTo(TaskPriority::class, 'task_priority_id');
+    }
+
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(Subtask::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function assignee(): BelongsTo
@@ -300,6 +341,15 @@ class Task extends Model
             $this->updateTimeInStatus($oldStatus);
         });
 
+        if ($oldStatus?->id !== $newStatus->id) {
+            app(ActivityLogService::class)->log($this, 'status_changed',
+                'Status changed from '.($oldStatus?->name ?? 'none')." to {$newStatus->name}: {$this->title}",
+                ['from' => $oldStatus?->name, 'to' => $newStatus->name, 'note' => $note]);
+
+            $this->notifyPeople(new TaskStatusChanged($this, $newStatus->name, auth()->user()),
+                [$this->created_by, $this->assigned_to, ...$this->assignedUsers()->pluck('users.id')]);
+        }
+
         if ($this->phase) {
             $this->phase->updateProgress();
             if ($this->phase->project) {
@@ -369,6 +419,8 @@ class Task extends Model
 
     public function assignTo(User $user, ?string $note = null): void
     {
+        $isNew = ! $this->assignedUsers()->whereKey($user->id)->exists();
+
         $this->assignedUsers()->syncWithoutDetaching([$user->id => [
             'assigned_by' => auth()->id(),
             'assigned_at' => now(),
@@ -378,11 +430,45 @@ class Task extends Model
         if (! $this->assigned_to) {
             $this->update(['assigned_to' => $user->id]);
         }
+
+        if ($isNew) {
+            app(ActivityLogService::class)->log($this, 'assigned', "{$this->title} assigned to {$user->name}", ['user_id' => $user->id, 'note' => $note]);
+            $this->notifyPeople(new TaskAssigned($this, auth()->user()), [$user->id]);
+        }
+    }
+
+    /** Send an in-app notification to these users, skipping whoever made the change. */
+    protected function notifyPeople($notification, array $userIds): void
+    {
+        $ids = collect($userIds)->filter()->unique()->reject(fn ($id) => (int) $id === (int) auth()->id());
+
+        if ($ids->isNotEmpty()) {
+            Notification::send(User::whereIn('id', $ids)->get(), $notification);
+        }
+    }
+
+    /**
+     * Statuses to offer this user in a status dropdown: the current one plus
+     * the allowed next steps. Completing a task under review is left to
+     * reviewers and editors (same rule as TaskController::authorizeTaskWork).
+     */
+    public function statusOptionsFor(User $user): Collection
+    {
+        $canComplete = $user->isDirector() || $user->can('edit-task') || $user->can('review-task');
+
+        return TaskStatus::orderBy('sort_order')->get()->filter(function (TaskStatus $status) use ($canComplete) {
+            if ($status->id === $this->task_status_id) {
+                return true;
+            }
+
+            return $this->canTransitionTo($status->name) && ($status->name !== 'Completed' || $canComplete);
+        })->values();
     }
 
     public function unassignFrom(User $user): void
     {
         $this->assignedUsers()->detach($user->id);
+        app(ActivityLogService::class)->log($this, 'unassigned', "{$user->name} removed from {$this->title}", ['user_id' => $user->id]);
 
         if ($this->assigned_to === $user->id) {
             $this->update(['assigned_to' => null]);
@@ -435,13 +521,23 @@ class Task extends Model
         return $colors[$this->priority?->name] ?? 'secondary';
     }
 
+    /**
+     * Whole calendar days from today to the deadline: positive when it is ahead,
+     * negative when it has passed. Carbon 3's diffInDays() returns fractional
+     * days, which leaked into labels as "Due in 2.39140305d".
+     */
+    protected function calendarDaysUntilDeadline(): int
+    {
+        return (int) now()->startOfDay()->diffInDays($this->deadline->copy()->startOfDay(), false);
+    }
+
     public function getRemainingTimeAttribute(): ?string
     {
         if (! $this->deadline || $this->completed_at) {
             return null;
         }
 
-        $days = now()->diffInDays($this->deadline, false);
+        $days = $this->calendarDaysUntilDeadline();
 
         if ($days > 0) {
             return "{$days} days remaining";
@@ -458,7 +554,7 @@ class Task extends Model
             return null;
         }
         if ($this->deadline->isPast()) {
-            return abs($this->deadline->diffInDays(now()));
+            return abs($this->calendarDaysUntilDeadline());
         }
 
         return 0;
@@ -470,7 +566,7 @@ class Task extends Model
             return null;
         }
         if ($this->deadline->isFuture()) {
-            return now()->diffInDays($this->deadline);
+            return max(0, $this->calendarDaysUntilDeadline());
         }
 
         return 0;
@@ -584,7 +680,10 @@ class Task extends Model
             return 'Overdue';
         }
 
-        $daysLeft = now()->diffInDays($this->deadline, false);
+        $daysLeft = $this->calendarDaysUntilDeadline();
+        if ($daysLeft <= 0) {
+            return 'Due today';
+        }
         if ($daysLeft <= 3) {
             return "Due in {$daysLeft}d";
         }

@@ -1,81 +1,59 @@
-@extends('adminlte::page')
-<link rel="stylesheet" href="{{ asset('css/ju-custom.css') }}">
+@extends('layouts.console')
 
 @section('title', 'Task Board')
 
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center">
-        <h1>
-            <i class="fas fa-columns text-primary"></i>
-            Task Board
-            <small>Kanban View</small>
-        </h1>
-        <div>
-            <a href="{{ route('admin.tasks.index') }}" class="btn btn-secondary">
-                <i class="fas fa-list"></i> List View
-            </a>
-            <a href="{{ route('admin.projects.index') }}" class="btn btn-success">
-                <i class="fas fa-plus"></i> Add Task
-            </a>
-        </div>
-    </div>
+    <x-ui.page-header title="Task board" description="Drag a card to another column to change its status.">
+        <x-ui.button variant="outline" :href="route('admin.tasks.index')">
+            <i data-lucide="list" class="size-4"></i>
+            List view
+        </x-ui.button>
+        @can('create-task')
+            <x-ui.button :href="route('admin.tasks.create')">
+                <i data-lucide="plus" class="size-4"></i>
+                Add task
+            </x-ui.button>
+        @endcan
+    </x-ui.page-header>
 @endsection
 
 @section('content')
     {{-- Filters --}}
-    <div class="card">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.tasks.kanban') }}" class="row">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>Project</label>
-                        <select name="project" class="form-control">
-                            <option value="">All Projects</option>
-                            @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ request('project') == $project->id ? 'selected' : '' }}>
-                                    {{ $project->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>Assignee</label>
-                        <select name="assignee" class="form-control">
-                            <option value="">All Users</option>
-                            @foreach($users as $user)
-                                <option value="{{ $user->id }}" {{ request('assignee') == $user->id ? 'selected' : '' }}>
-                                    {{ $user->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>Priority</label>
-                        <select name="priority" class="form-control">
-                            <option value="">All Priorities</option>
-                            @foreach($priorities as $priority)
-                                <option value="{{ $priority->id }}" {{ request('priority') == $priority->id ? 'selected' : '' }}>
-                                    {{ $priority->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-filter"></i> Apply Filters
-                    </button>
-                    <a href="{{ route('admin.tasks.kanban') }}" class="btn btn-secondary ml-2">
-                        <i class="fas fa-times"></i>
-                    </a>
-                </div>
-            </form>
+    <form method="GET" action="{{ route('admin.tasks.kanban') }}" class="mb-5 flex flex-wrap items-end gap-3">
+        <div class="w-full sm:w-56">
+            <label for="filter-project" class="sr-only">Project</label>
+            <x-ui.select id="filter-project" name="project">
+                <option value="">All projects</option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}" {{ request('project') == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
+                @endforeach
+            </x-ui.select>
         </div>
-    </div>
+        <div class="w-full sm:w-48">
+            <label for="filter-assignee" class="sr-only">Assignee</label>
+            <x-ui.select id="filter-assignee" name="assignee">
+                <option value="">All assignees</option>
+                @foreach ($users as $user)
+                    <option value="{{ $user->id }}" {{ request('assignee') == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
+                @endforeach
+            </x-ui.select>
+        </div>
+        <div class="w-full sm:w-40">
+            <label for="filter-priority" class="sr-only">Priority</label>
+            <x-ui.select id="filter-priority" name="priority">
+                <option value="">All priorities</option>
+                @foreach ($priorities as $priority)
+                    <option value="{{ $priority->id }}" {{ request('priority') == $priority->id ? 'selected' : '' }}>{{ $priority->name }}</option>
+                @endforeach
+            </x-ui.select>
+        </div>
+        <div class="flex gap-2">
+            <x-ui.button type="submit" variant="outline">Apply</x-ui.button>
+            @if (request()->hasAny(['project', 'assignee', 'priority']))
+                <x-ui.button variant="ghost" :href="route('admin.tasks.kanban')">Clear</x-ui.button>
+            @endif
+        </div>
+    </form>
 
     {{-- Priority Stats --}}
     @php
@@ -86,123 +64,63 @@
     @endphp
     @include('admin.tasks.partials.priority-stats', ['tasks' => $tasks])
 
-    {{-- Status Stats --}}
-    <div class="row mb-3">
-        @foreach($statusStats as $status => $stats)
-            <div class="col-md-2 col-6">
-                <div class="small-box bg-{{ $stats['color'] }}">
-                    <div class="inner">
-                        <h3>{{ $stats['count'] }}</h3>
-                        <p>{{ $status }} ({{ $stats['percentage'] }}%)</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-tasks"></i>
-                    </div>
-                </div>
+    {{-- Status counts --}}
+    <dl class="m-0 mt-6 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+        @foreach ($statusStats as $status => $stats)
+            <div class="rounded-xl border border-border bg-card px-4 py-3 shadow-xs">
+                <dt class="truncate text-[13px] font-normal text-muted-foreground">{{ $status }}</dt>
+                <dd class="m-0 mt-1 flex items-baseline gap-2">
+                    <span class="tabular text-2xl font-semibold">{{ $stats['count'] }}</span>
+                    <span class="tabular text-[13px] text-muted-foreground">{{ $stats['percentage'] }}%</span>
+                </dd>
             </div>
         @endforeach
-    </div>
+    </dl>
 
-    {{-- Kanban Board --}}
-    <div class="row" id="kanban-board">
-        @foreach($boardData as $status => $data)
-            <div class="col-md-2 col-6">
-                <div class="card card-{{ $data['status']->color }}">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            {{ $status }}
-                            <span class="badge badge-light ml-2">{{ $data['count'] }}</span>
-                        </h5>
-                    </div>
-                    <div class="card-body p-2 kanban-column" 
-                         data-status="{{ $status }}"
-                         style="min-height: 300px; max-height: 600px; overflow-y: auto;">
-                        
-                        @forelse($data['tasks'] as $task)
-                            <div class="kanban-item card card-sm mb-2" 
-                                 data-task-id="{{ $task->id }}"
-                                 draggable="true">
-                                <div class="card-body p-2">
-                                    <div class="d-flex flex-column">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <a href="{{ route('admin.tasks.show', $task) }}" 
-                                               class="font-weight-bold text-dark">
-                                                {{ Str::limit($task->title, 25) }}
-                                            </a>
-                                        </div>
-                                        <div class="mt-1">
-                                            @include('admin.tasks.partials.priority-badge')
-                                        </div>
-                                        <small class="text-muted mt-1">
-                                            <i class="fas fa-user"></i> 
-                                            {{ $task->assignee->name ?? 'Unassigned' }}
-                                        </small>
-                                        <small class="text-muted">
-                                            <i class="fas fa-project-diagram"></i> 
-                                            {{ $task->phase->project->name ?? 'N/A' }}
-                                        </small>
-                                        @if($task->progress_percentage > 0)
-                                            <div class="progress mt-1" style="height: 4px;">
-                                                <div class="progress-bar bg-{{ $task->progress_percentage == 100 ? 'success' : 'primary' }}"
-                                                     style="width: {{ $task->progress_percentage }}%">
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
+    {{-- Board --}}
+    <div class="-mx-4 mt-6 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" id="kanban-board">
+        <div class="flex min-w-max gap-4">
+            @foreach ($boardData as $status => $data)
+                <section class="flex w-72 shrink-0 flex-col rounded-xl border border-border bg-muted/60" aria-label="{{ $status }}">
+                    <header class="flex items-center justify-between gap-2 px-3 py-2.5">
+                        <h3 class="m-0 font-sans text-[13px] font-semibold text-foreground">{{ $status }}</h3>
+                        <x-ui.badge>{{ $data['count'] }}</x-ui.badge>
+                    </header>
+                    <div class="kanban-column flex max-h-[600px] min-h-[300px] flex-col gap-2 overflow-y-auto rounded-b-xl p-2"
+                         data-status="{{ $data['canonical_name'] }}">
+                        @forelse ($data['tasks'] as $task)
+                            <article class="kanban-item cursor-grab rounded-lg border border-border bg-card p-3 shadow-xs transition-shadow duration-200 hover:shadow-card"
+                                     data-task-id="{{ $task->id }}"
+                                     draggable="true">
+                                <a href="{{ route('admin.tasks.show', $task) }}" class="block font-semibold leading-snug text-foreground no-underline hover:text-primary hover:no-underline">
+                                    {{ Str::limit($task->title, 40) }}
+                                </a>
+                                @include('admin.tasks.partials.subtask-count')
+                                <div class="mt-2">
+                                    @include('admin.tasks.partials.priority-badge')
                                 </div>
-                            </div>
+                                <div class="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                                    <p class="m-0 flex items-center gap-1.5"><i data-lucide="user" class="size-3.5"></i>{{ $task->assignee->name ?? 'Unassigned' }}</p>
+                                    <p class="m-0 flex items-center gap-1.5"><i data-lucide="folder-kanban" class="size-3.5"></i>{{ $task->phase->project->name ?? 'N/A' }}</p>
+                                </div>
+                                @if ($task->progress_percentage > 0)
+                                    <x-ui.progress class="mt-2" :value="$task->progress_percentage" :label="false" />
+                                @endif
+                            </article>
                         @empty
-                            <div class="text-center text-muted p-3">
-                                <small>No tasks</small>
-                            </div>
+                            <p class="m-0 py-6 text-center text-[13px] text-muted-foreground">No tasks</p>
                         @endforelse
                     </div>
-                </div>
-            </div>
-        @endforeach
+                </section>
+            @endforeach
+        </div>
     </div>
 @endsection
 
 @push('css')
 <style>
-    .kanban-column {
-        background: #f8f9fa;
-        border-radius: 5px;
-        min-height: 300px;
-        padding: 8px;
-    }
-    .kanban-item {
-        cursor: grab;
-        border-left: 4px solid #007bff;
-        transition: all 0.2s;
-        border-radius: 4px;
-    }
-    .kanban-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .kanban-item.dragging {
-        opacity: 0.5;
-        cursor: grabbing;
-    }
-    .kanban-column.drag-over {
-        background: #e9ecef;
-        border: 2px dashed #007bff;
-    }
-    .small-box {
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .card-sm .card-body {
-        padding: 0.5rem;
-    }
-    .gap-1 {
-        gap: 4px;
-    }
-    .priority-badge, .deadline-badge {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-    }
+    .kanban-item.dragging { opacity: 0.5; cursor: grabbing; }
+    .kanban-column.drag-over { background: hsl(210 74% 46% / 0.06); outline: 2px dashed var(--ring); outline-offset: -4px; }
 </style>
 @endpush
 
@@ -236,10 +154,10 @@ document.addEventListener('DOMContentLoaded', function() {
         column.addEventListener('drop', function(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
-            
+
             const taskId = e.dataTransfer.getData('text/plain');
             const newStatus = this.dataset.status;
-            
+
             fetch('{{ route("admin.tasks.kanban-reorder") }}', {
                 method: 'POST',
                 headers: {
